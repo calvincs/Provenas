@@ -1,0 +1,8 @@
+# The pyneural engine + CLI need NO third-party packages (pure standard library).
+# These are only required to run the research experiments in experiments/.
+#   pip install -e ".[research]"     # or: pip install -r requirements.txt
+torch
+numpy
+matplotlib
+scipy
+sympy

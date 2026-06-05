@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "provenas"
+version = "0.1.0"
+description = "A small neuro-symbolic engine: talk to a knowledge base and get exact, proven, non-hallucinated answers."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Calvin Schultz" }]
+keywords = ["neuro-symbolic", "knowledge-graph", "inference", "datalog", "llm", "reasoning", "cli"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+# The engine + CLI are pure standard library — no third-party runtime dependencies.
+# (Natural-language features additionally need a local Ollama server; see the README.)
+dependencies = []
+
+[project.optional-dependencies]
+research = ["torch", "numpy", "matplotlib", "scipy"]   # to run the experiments/ (the research phases)
+dev = ["pytest"]
+
+[project.urls]
+Homepage = "https://github.com/calvincs/Provenas"
+
+[project.scripts]
+provenas = "provenas.cli:main"
+
+[tool.setuptools]
+packages = ["provenas"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

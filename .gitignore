@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# virtualenvs
+.venv/
+venv/
+env/
+
+# generated datasets, model checkpoints, plots, knowledge bases
+artifacts/
+data/
+*.db
+*.pt
+*.png
+*.npz
+*.pkl
+
+# internal workstream / research-process docs (not for end users)
+JOURNAL.md
+ROADMAP.md
+neural-transpiler-plan.md
+
+# dev tooling tied to the author's box
+scripts/
+
+# OS / editor
+.DS_Store
+*.swp
+.idea/
+.vscode/
