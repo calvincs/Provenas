@@ -8,8 +8,9 @@ fabric admits it ONLY after a layered gate:
      a minimal environment, run against I/O examples (test-before-admit, extended to code).
 Only code that is both safe AND correct on every example is admitted (and persisted to SQLite).
 
-This is defense in depth for a single-box toy. A real deployment needs OS-level isolation (containers /
-seccomp / gVisor) — the AST allowlist and a resource-limited subprocess are necessary, not sufficient.
+This is defense in depth for a single-box, single-tenant system. Running UNTRUSTED tenants needs OS-level
+isolation (containers / seccomp / gVisor) — the AST allowlist and a resource-limited subprocess are
+necessary, not sufficient.
 """
 from __future__ import annotations
 

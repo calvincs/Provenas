@@ -111,6 +111,17 @@ nothing is admitted until it passes a test*:
 So the system **grows safely**: it learns vetted, composable rules, regenerates its own neural controller as
 it evolves, and synthesizes sandboxed tools — all by proposal-and-proof, not by trust.
 
+**Hardening it was engineering, not research — and the same spine absorbed it.** The evaluator became an
+indexed, semi-naive, **stratified Datalog engine**: rule bodies gained negation (`~rel` — "unless", with
+negation-through-a-cycle rejected at admission) and numeric comparison guards (`?age >= 18`), which is what
+real policy actually needs. The derived closure is **materialized** — recomputed when facts or rules change,
+served from cache on reads. And the governance idea extended naturally to operations: **pinned regression
+cases** (any answer can be pinned; a rule change that would flip a pinned decision is rejected — CI for
+rules), rule **activation history** (switch a rule off, see exactly which conclusions evaporate — instant
+what-if analysis), an optional **strict relation schema** (a typo'd fact is rejected, not stored), a
+**decision log** (every answer, not just every change, is on the record), and an **HTTP service mode** that
+runs the fabric as a local policy sidecar — the proof riding along in every response, no LLM required.
+
 ---
 
 ## 6. Performance, novelty, and honest limits
@@ -119,17 +130,26 @@ it evolves, and synthesizes sandboxed tools — all by proposal-and-proof, not b
 on massive batched GPU throughput (≈43×) — and even then it is approximate. You never swap exact code for a
 net to gain speed or accuracy; the net's role is *control at scale*, and the fabric keeps the exactness.
 
+The symbolic engine, meanwhile, scales like the database technique it is. The first implementation was
+naive (re-derive everything, full scans): 2,000 facts took 28 s to close. Indexing the triple store,
+joining each round only against the newly derived delta (semi-naive evaluation, delta atom first), and
+materializing the closure brought that to **0.04 s — a 700× drop** — with 200,000 base facts closing to a
+1.15 M-fact KB in ~6 s and cached reads in microseconds. The envelope (10⁵–10⁶ facts on one box) is
+enforced by a performance regression suite, so it is a published number, not a hope.
+
 **Novelty — honestly.** Each individual component sits in well-studied territory (length-generalization /
 RASP-L, DreamCoder-style library learning, Datalog inference, knowledge-graph embeddings, neuro-symbolic RL,
 LLM-as-proposer-with-verification). The contribution is not a new algorithm; it is the **compound** — these
 pieces integrated into one small, coherent, end-to-end system with **test-before-admit at every level** and
 exactness as an invariant. The integrated whole being useful is the point.
 
-**Limits.** This is a research-grade engine, not a hardened product: natural-language answers route through
-an LLM (seconds of latency, and a weaker model proposes worse actions — the gates catch them, but accuracy
-tracks model strength); the code sandbox is defense-in-depth (AST allowlist + a resource-limited
-subprocess), **not** OS-level isolation, so untrusted multi-tenant use needs containers / seccomp; and it is
-single-box scale.
+**Limits.** Natural-language answers route through an LLM (seconds of latency, and a weaker model proposes
+worse actions — the gates catch them, but accuracy tracks model strength; the gates make a weak model *safe*,
+not smart). The code sandbox is defense-in-depth (AST allowlist + a resource-limited subprocess), **not**
+OS-level isolation, so untrusted multi-tenant use needs containers / seccomp. And it is a single-process,
+single-writer system: the service mode serializes access on one box — it is a sidecar with a measured
+10⁵–10⁶-fact envelope, not a distributed database, and it only knows what it has been told (it complements
+retrieval; it does not replace it).
 
 ---
 
