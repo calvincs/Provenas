@@ -8,6 +8,8 @@ Provenas pairs a **neural / LLM controller** (which *proposes* — translates la
 rules and code) with an **exact symbolic fabric** (which *verifies and computes* — facts, rules, inference,
 arithmetic, memory). The LLM is the mouth and hands; the fabric is the source of truth. Every answer comes
 with a derivation; every change — a fact, a rule, a piece of code — is validated before it is accepted.
+(Without a model connected, it runs as a purely symbolic engine — the `:command` interface, the rules, the
+proofs, and the HTTP service all work with no LLM at all.)
 
 > It started as a research project on *where neural nets fail at exact computation* (the cliff plots in
 > the table below) and grew, component by component, into the engine described here. The research write-up
