@@ -242,7 +242,7 @@ provenas/
   domains.py              starter knowledge packs (family / rbac / diagnostics / eligibility / config)
   kg.py  infer.py         indexed knowledge graph + stratified semi-naive Datalog (negation,
                           comparison guards) with provenance proofs
-  learn.py                rule admission gate (test against ± examples before commit)
+  learn.py                rule admission gate (± examples + pinned regression cases before commit)
   rewrite.py              learned term-rewriting engine + value-preserving rule gate
   toolsmith.py            tool synthesis safety gate (AST allowlist + sandboxed subprocess)
   engine.py typed.py …    the cross-domain reduction engine from the research phases
@@ -253,7 +253,7 @@ tests/sanity.py           fast checks for every component (no training, no LLM)
 ## Tests & development
 
 ```bash
-pip install -e ".[dev]" && pytest        # core + adversarial-stress suites (pure stdlib, fast)
+pip install -e ".[dev]" && pytest        # core + stress + perf suites (pure stdlib, fast)
 pip install -e ".[research]" && pytest   # also runs the Phase 1-5 research tests (torch + numpy)
 ```
 

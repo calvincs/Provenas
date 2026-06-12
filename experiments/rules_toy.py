@@ -157,7 +157,7 @@ def main():
     print(f"  reopened DB again -> can dana query_db?  {recheck}  (the learned fact stuck)")
     store2.close()
 
-    print(f"\nSUMMARY: {passed}/{total} questions answered exactly across {len(DOMAINS)} domains "
+    print(f"\nSUMMARY: {passed}/{total} questions answered exactly across {len(domains)} domain(s) "
           f"(same pipeline, only data swapped).")
 
 
