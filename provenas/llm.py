@@ -45,7 +45,8 @@ class LLM:
             if fmt == "json":
                 body["response_format"] = {"type": "json_object"}
             headers = {"Authorization": "Bearer " + self.api_key} if self.api_key else {}
-            return self._post("/v1/chat/completions", body, headers)["choices"][0]["message"]["content"]
+            path = "/chat/completions" if self.host.endswith("/v1") else "/v1/chat/completions"
+            return self._post(path, body, headers)["choices"][0]["message"]["content"]
         body = {"model": self.model, "stream": False, "think": False, "messages": messages,   # Ollama native
                 "options": {"temperature": 0, "num_ctx": 2048, "num_predict": num_predict}}
         if fmt:
@@ -71,8 +72,9 @@ class LLM:
         from provenas.infer import Rule
         sysmsg = ('You induce ONE logic rule for a knowledge-graph engine from the description and '
                   'examples. Output ONLY JSON: {"name":str,"body":[[s,r,o],...],"head":[s,r,o]}. Share '
-                  '"?x"-style variables between body and head. You MAY add an inequality guard atom '
-                  '["?a","!=","?b"] to require two variables be different people/things.')
+                  '"?x"-style variables between body and head. You MAY add guard atoms: '
+                  '["?a","!=","?b"] (two variables must differ), comparisons ["?age",">=","18"] '
+                  '(also < <= > ==), and ["?x","~rel","?y"] meaning NO fact (?x rel ?y) exists.')
         out = self._chat([{"role": "system", "content": sysmsg},
                           {"role": "user", "content": context + "\n\n" + spec}], fmt="json")
         d = _loads(out)
@@ -102,7 +104,9 @@ class LLM:
 
 
 def _loads(s):
-    """Tolerant JSON: strip code fences / surrounding prose, take the outermost {...}, drop trailing commas."""
+    """Tolerant JSON: strip code fences / surrounding prose, take the outermost {...}, drop trailing commas.
+    Only if it STILL fails to parse, quote bare ?variables (?a -> "?a") — last, because that regex cannot
+    see JSON string boundaries and would corrupt a valid document containing '?' inside a string."""
     import re
     s = s.strip()
     if "```" in s:
@@ -111,8 +115,10 @@ def _loads(s):
     if i >= 0 and j > i:
         s = s[i:j + 1]
     s = re.sub(r",(\s*[}\]])", r"\1", s)          # trailing commas
-    s = re.sub(r'(?<!")\?(\w+)', r'"?\1"', s)     # quote bare ?variables (?a -> "?a")
-    return json.loads(s)
+    try:
+        return json.loads(s)
+    except json.JSONDecodeError:
+        return json.loads(re.sub(r'(?<!")\?(\w+)', r'"?\1"', s))
 
 
 def _strip_code(s):

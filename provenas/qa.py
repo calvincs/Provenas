@@ -6,7 +6,7 @@ Used by the CLI and the demo harness so there is one canonical answer path.
 """
 from __future__ import annotations
 
-from provenas.infer import forward_chain_prov, explain, _fact
+from provenas.infer import explain, _fact
 
 SCHEMA = ('Action schema (output exactly ONE):\n'
           '  query a set:  {"action":"query","pattern":["?x","<relation>","<value>"]}   (?x is the unknown; it may be any slot)\n'
@@ -37,22 +37,31 @@ def context_from_store(store, blurb=""):
     return head + SCHEMA
 
 
-def run_action(store, action):
-    """Execute a {query|check|assert} action exactly. Returns dict(kind, answer, trace)."""
-    kg = store.to_kg()
-    _, prov = forward_chain_prov(kg, store.rules())
-    kind = action.get("action")
-    if kind == "assert":
-        store.assert_(*action["triple"], source="user")
-        store.log("assert", action["triple"])
-        return dict(kind="assert", answer=True, trace=f"stored {_fact(tuple(action['triple']))}")
+def _triple(action, key):
+    """The action's [s, r, o] as a tuple of 3 non-empty strings, or None if malformed."""
+    t = action.get(key)
+    if isinstance(t, (list, tuple)) and len(t) == 3 and all(isinstance(x, str) and x for x in t):
+        return tuple(t)
+    return None
+
+
+def eval_action(kg, prov, action):
+    """Evaluate a READ-ONLY {query|check} action against an already-chained KG. Pure — used by
+    run_action and by the rule gate's regression-case replay. A malformed action yields
+    kind="error", never a crash — the action usually comes from an LLM."""
+    kind = action.get("action") if isinstance(action, dict) else None
+    bad = dict(kind="error", answer=None, trace=f"malformed action {action!r}")
     if kind == "check":
-        t = tuple(action["triple"])
+        t = _triple(action, "triple")
+        if t is None:
+            return bad
         ok = t in kg.triples
         trace = "\n".join(explain(t, prov)) if ok else f"{_fact(t)} is not derivable from the facts + rules."
         return dict(kind="check", answer=ok, trace=trace)
     if kind == "query":
-        pat = tuple(action["pattern"])
+        pat = _triple(action, "pattern")
+        if pat is None:
+            return bad
         var = next((x for x in pat if isinstance(x, str) and x.startswith("?")), None)
         binds = kg.query(pat)
         ans = sorted({b[var] for b in binds}) if var else [bool(binds)]
@@ -62,6 +71,28 @@ def run_action(store, action):
             lines += explain(tgt, prov)
         return dict(kind="query", answer=ans, trace="\n".join(lines))
     return dict(kind="error", answer=None, trace=f"unknown action {action!r}")
+
+
+def run_action(store, action):
+    """Execute a {query|check|assert} action exactly against the store. Returns dict(kind,
+    answer, trace). Reads are served from the store's materialized closure; every decision
+    (query/check answer) is appended to the audit log."""
+    kind = action.get("action") if isinstance(action, dict) else None
+    if kind == "assert":
+        t = _triple(action, "triple")
+        if t is None:
+            return dict(kind="error", answer=None, trace=f"malformed action {action!r}")
+        try:
+            store.assert_(*t, source="user")
+        except ValueError as e:                                 # e.g. strict schema rejection
+            return dict(kind="error", answer=None, trace=str(e))
+        store.log("assert", list(t))
+        return dict(kind="assert", answer=True, trace=f"stored {_fact(t)}")
+    kg, prov = store.closure()
+    r = eval_action(kg, prov, action)
+    if r["kind"] in ("check", "query"):
+        store.log("decide", {"action": action, "answer": r["answer"]})
+    return r
 
 
 def show_answer(r):

@@ -51,6 +51,8 @@ def answer(goal, base_kg, rules, semantic, tools):
         if s is None:
             return None
         sets.append(s)
+    if not sets:                                   # empty goal: no constraints, nothing to answer
+        return set()
     if len(sets) > 1 and "combine" not in tools:
         return None
     res = set(sets[0])

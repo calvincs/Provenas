@@ -32,9 +32,17 @@ on one box, offline, auditable end to end — a fit for regulated / safety-criti
 "the LLM probably got it right" isn't acceptable. It can grow safely because nothing — fact, rule, or
 code — enters the system without passing a test.
 
-**Honest limits.** This is a research-grade engine, not a product: answers route through a local LLM (≈
-seconds of latency), the code sandbox is defense-in-depth (AST allowlist + a resource-limited subprocess),
-*not* production-grade isolation — real untrusted use needs containers/seccomp — and it's single-box scale.
+**Scale & performance (measured).** The engine is a stratified, semi-naive Datalog evaluator over an
+indexed triple store, and the derived closure is **materialized** — computed when facts or rules change,
+served from cache on reads. Measured on one box (CPU): 50k base facts → 287k-fact closure in ~1.3s;
+200k base facts → 1.15M-fact closure in ~6s; queries against the materialized KB are sub-millisecond.
+The envelope (10⁵–10⁶ facts) is enforced by `tests/test_perf.py`.
+
+**Honest limits.** Natural-language answers route through an LLM (≈ seconds of latency, accuracy tracks
+model strength — the gates catch bad proposals either way); the code sandbox is defense-in-depth (AST
+allowlist + a resource-limited subprocess), *not* OS-level isolation — untrusted multi-tenant use needs
+containers/seccomp; and it's a single-process, single-writer system (the HTTP service mode serializes
+access; it is not a distributed database).
 
 ---
 
@@ -47,6 +55,7 @@ without one.
 ```bash
 pip install -e .                    # installs the `provenas` command (pure stdlib — no heavy deps)
 provenas mykb.db                    # opens (or creates) a persistent SQLite knowledge base
+provenas-serve mykb.db 8642         # …or run the same KB as a local HTTP decision service
 ```
 
 Starter packs to `:load`: **family, rbac, diagnostics, eligibility, config** (or start empty and `:assert`
@@ -54,7 +63,7 @@ your own facts).
 
 ```text
 provenas — neuro-symbolic engine   (kb: mykb.db)
-  llm: qwen3.5:9b ready   ·   :help for commands
+  llm: qwen3.5:9b via ollama @ http://localhost:11434  · ready   ·   :help
 
 provenas> :load rbac
   loaded 'rbac'
@@ -139,9 +148,29 @@ loop is killed by the sandbox, a wrong implementation fails the tests — only `
 its rewrite rules living in the same KB (`:rewrites` to list them). And a synthesized tool's result can
 become a fact: `:call double 21 as answer is` asserts `(answer is 42)`, which later queries can use.
 
-**Inspect everything.** `:facts`, `:rules`, `:tools`, `:rewrites`, `:why <s> <r> <o>`, `:log`, `:kb` —
-the knowledge base, its rules, synthesized tools, rewrite rules, and an audit log of every change are all
-open to view.
+**Real policy rules: negation and comparisons.** Rule bodies aren't limited to positive lookups —
+`["?u","~suspended","?x"]` means *no* `suspended` fact exists (stratified negation, so "allowed *unless*
+suspended" works and a negation cycle is rejected at admission), and comparison guards like
+`["?age",">=","18"]` compare numerically. Both are available to learned rules.
+
+**Pin decisions; rule changes must preserve them.** After any answer, `:case prod-gate` pins it as a
+regression case. From then on, every `:learn` re-runs the pinned cases against the candidate ruleset and
+**rejects any rule that flips one** — CI for rules. `:disable <rule>` / `:enable <rule>` deactivate a rule
+without losing it (the closure updates immediately), and `:declare` + `:strict on` make the store reject
+asserts whose relation was never declared (no more typo'd facts).
+
+**Inspect everything.** `:facts`, `:rules`, `:tools`, `:rewrites`, `:cases`, `:schema`,
+`:why <s> <r> <o>`, `:log`, `:kb` — the knowledge base, rules, tools, pinned cases, schema, and an audit
+log that records every change *and every decision* (query/check + answer) are all open to view.
+
+**Run it as a service.** `provenas-serve mykb.db` exposes the same exact fabric over HTTP — the way OPA
+runs as a policy sidecar, but every answer carries its proof. `POST /action` needs no model at all;
+`POST /ask` adds the NL layer when one is configured. Set `PROVENAS_API_TOKEN` to require a bearer token.
+
+```bash
+curl -s localhost:8642/action -d '{"action":"check","triple":["alice","can","prod_deploy"]}'
+# {"kind": "check", "answer": true, "trace": "(alice can prod_deploy)   ⇐ rule[can-do]\n  ..."}
+```
 
 Two end-to-end demo scripts reproduce the headline results:
 `python -m experiments.rules_toy` (NL → proof across three domains, 9/9) and
@@ -154,12 +183,16 @@ Two end-to-end demo scripts reproduce the headline results:
 One shape, repeated: **a controller proposes, exact tools verify and compute, inspectable memory holds the
 state.** Three tiers, all local:
 
-- **Interface** — a Qwen model on Ollama (`provenas/llm.py`): NL → a structured `{query|check|assert}`
-  action, or a drafted rule / tool. Reasoning models, so calls disable "thinking" and request JSON.
-- **Fabric (the source of truth)** — an associative knowledge graph (`kg.py`), a Datalog-style inference
-  engine with provenance proofs (`infer.py`), a learned term-rewriting engine (`rewrite.py`), and the
-  cross-domain reduction engine from the research phase (`engine.py`, `typed.py`).
-- **Persistence** — SQLite (`store.py`): facts, rules, a tool registry, and an append-only audit log.
+- **Interface** — any chat model, via Ollama or an OpenAI-compatible API (`provenas/llm.py`; default
+  Qwen on local Ollama): NL → a structured `{query|check|assert}` action, or a drafted rule / tool.
+  Calls disable "thinking" on reasoning models and request JSON.
+- **Fabric (the source of truth)** — an indexed associative knowledge graph (`kg.py`), a stratified
+  semi-naive Datalog engine with negation, comparison guards, and provenance proofs (`infer.py`), a
+  learned term-rewriting engine (`rewrite.py`), and the cross-domain reduction engine from the research
+  phase (`engine.py`, `typed.py`).
+- **Persistence** — SQLite (`store.py`): facts, rules (with activation history), a tool registry,
+  pinned regression cases, an optional relation schema, the materialized closure, and an append-only
+  audit + decision log.
 
 The governance spine, applied at **every** level — facts, rules, rewrite rules, and code — is the same:
 
@@ -202,11 +235,13 @@ findings are written up in [`CONCLUSIONS.md`](CONCLUSIONS.md).)
 ```
 provenas/
   cli.py  __main__.py     the CLI (python -m provenas [kb.db])
-  llm.py                  Qwen-on-Ollama interface (translate / propose rule / propose tool / narrate)
-  store.py                SQLite spine: facts, rules, tool registry, audit log
+  server.py               HTTP service mode (provenas-serve): the fabric as a decision sidecar
+  llm.py                  LLM interface, Ollama or OpenAI-compatible (translate / propose rule / tool / narrate)
+  store.py                SQLite spine: facts, rules, tools, cases, schema, materialized closure, audit log
   qa.py                   the canonical answer path: action -> exact answer + proof
-  domains.py              starter knowledge packs (family / rbac / diagnostics)
-  kg.py  infer.py         knowledge graph + Datalog inference with provenance proofs
+  domains.py              starter knowledge packs (family / rbac / diagnostics / eligibility / config)
+  kg.py  infer.py         indexed knowledge graph + stratified semi-naive Datalog (negation,
+                          comparison guards) with provenance proofs
   learn.py                rule admission gate (test against ± examples before commit)
   rewrite.py              learned term-rewriting engine + value-preserving rule gate
   toolsmith.py            tool synthesis safety gate (AST allowlist + sandboxed subprocess)
@@ -225,7 +260,9 @@ pip install -e ".[research]" && pytest   # also runs the Phase 1-5 research test
 - `tests/test_core.py` — the engine and fabric (knowledge graph, inference, store, QA, rewrite, sandbox).
 - `tests/test_stress.py` — adversarial inputs: cyclic/recursive rules, malformed actions, and a battery of
   sandbox-escape attempts the tool gate must reject.
+- `tests/test_perf.py` — the published performance envelope, enforced (a return to naive evaluation fails).
 - `tests/test_research.py` — the distillation phases; auto-skipped if torch/numpy aren't installed.
+- `python -m tests.sanity` — the same fast checks as a plain script, no pytest needed.
 
 The research experiments live in `experiments/` (`python -m experiments.<name>`, needs the `research` extra)
 and write plots to `artifacts/`. The natural-language features need a local [Ollama](https://ollama.com)

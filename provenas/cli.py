@@ -35,7 +35,12 @@ HELP = """commands:
   :call <name> <args...> [as <s> <r>]
                                 call a tool; with 'as' assert its result as a fact (so queries can use it)
   :simplify <expr>              exact algebraic simplify, e.g. :simplify (x + 0) * (2 + 3)  ->  x * 5
-  :facts [substr]  :rules  :tools  :rewrites  :log [n]  :kb     inspect the knowledge base
+  :case <name>                  pin the LAST answer as a regression case (rule changes must preserve it)
+  :cases                        list pinned cases
+  :disable <rule>  :enable <rule>   deactivate / reactivate a rule (kept on record)
+  :declare <rel> [doc]          declare a relation in the schema
+  :strict on|off                strict mode: reject asserts whose relation is undeclared
+  :facts [substr]  :rules  :tools  :rewrites  :schema  :log [n]  :kb    inspect the knowledge base
   :narrate on|off               LLM one-line narration of answers (default off)
   :help    :quit
 """ % ", ".join(domains.names())
@@ -43,6 +48,15 @@ HELP = """commands:
 
 def _pairs(s):
     return [tuple(p.split(",")) for p in s.split() if "," in p]
+
+
+def _split(rest, usage):
+    """shlex.split with a usage hint instead of an opaque 'No closing quotation' error."""
+    try:
+        return shlex.split(rest)
+    except ValueError as e:
+        print(f"  bad quoting ({e}) — {usage}")
+        return None
 
 
 def _examples(s):
@@ -62,6 +76,8 @@ def _rule_str(rule):
 
 def _feedback(rep):
     msgs = []
+    if rep.get("error"):
+        msgs.append(f"it could not be evaluated: {rep['error']}")
     if rep["missing"]:
         msgs.append(f"it failed to derive required examples {rep['missing']} — check the "
                     "[subject, relation, object] direction (e.g. '(p parent c)' means p is the parent of c)")
@@ -81,7 +97,9 @@ def cmd(line, store, llm, state):
         print(f"  loaded '{rest.strip()}'" if d else f"  no such pack (try: {', '.join(domains.names())})")
 
     elif c in (":assert", ":retract"):
-        a = shlex.split(rest)
+        a = _split(rest, "usage: %s <s> <r> <o>" % c)
+        if a is None:
+            return
         if len(a) != 3:
             print("  usage: %s <s> <r> <o>" % c)
             return
@@ -92,11 +110,15 @@ def cmd(line, store, llm, state):
         print(f"  {'added' if c == ':assert' else 'removed'} ({a[0]} {a[1]} {a[2]})")
 
     elif c == ":why":
-        a = shlex.split(rest)
+        a = _split(rest, "usage: :why <s> <r> <o>")
+        if a is None:
+            return
         if len(a) != 3:
             print("  usage: :why <s> <r> <o>")
             return
-        r = qa.run_action(store, {"action": "check", "triple": a})
+        action = {"action": "check", "triple": a}
+        r = qa.run_action(store, action)
+        state["last"] = (action, r)
         print(f"  {qa.show_answer(r)}")
         print(_show_proof(r["trace"]))
 
@@ -136,7 +158,9 @@ def cmd(line, store, llm, state):
             seen.add(_rule_str(rule))
             ok, rep = admit_rule(store, rule, rel, pos, neg, source="qwen-revised")
         print(f"  -> {'ADMITTED (saved)' if ok else 'REJECTED'}  "
-              f"(missing={rep['missing']} violated={rep['violated']})")
+              f"(missing={rep['missing']} violated={rep['violated']}"
+              + (f" flips pinned cases {rep['case_flips']}" if rep.get("case_flips") else "")
+              + (f" error={rep['error']}" if rep.get("error") else "") + ")")
 
     elif c == ":tool":
         try:
@@ -164,7 +188,9 @@ def cmd(line, store, llm, state):
         print(f"  -> {'ADMITTED (saved)' if ok else 'REJECTED at [' + stage + ']'}: {detail}")
 
     elif c == ":call":
-        a = shlex.split(rest)
+        a = _split(rest, "usage: :call <name> <args...> [as <subject> <relation>]")
+        if a is None:
+            return
         if not a:
             print("  usage: :call <name> <args...> [as <subject> <relation>]")
             return
@@ -179,7 +205,11 @@ def cmd(line, store, llm, state):
         if not src:
             print(f"  no tool '{a[0]}' (see :tools)")
             return
-        args = [ast.literal_eval(x) for x in a[1:]]
+        try:
+            args = [ast.literal_eval(x) for x in a[1:]]
+        except (ValueError, SyntaxError):
+            print("  arguments must be Python literals, e.g. :call gcd 48 36")
+            return
         result = load_tool(src, a[0])(*args)
         print(f"  {a[0]}({', '.join(map(str, args))}) = {result}")
         if dest:
@@ -204,6 +234,54 @@ def cmd(line, store, llm, state):
             return
         print(f"  {rewrite.pretty(term)}  ->  {rewrite.pretty(rewrite.normal_form(term, rules))}")
 
+    elif c == ":case":
+        name = rest.strip()
+        if not name:
+            print("  usage: :case <name>   (pins the last query/check answer as a regression case)")
+            return
+        last = state.get("last")
+        if not last or last[1]["kind"] not in ("check", "query"):
+            print("  ask a question (or :why a fact) first — :case pins the LAST answer")
+            return
+        store.add_case(name, last[0], last[1]["answer"])
+        print(f"  pinned case '{name}': {last[0]} -> {last[1]['answer']}  (rule changes must preserve it)")
+
+    elif c == ":cases":
+        cs = store.cases()
+        for name, action, expect in cs:
+            print(f"  {name}: {action} -> {expect}")
+        print(f"  [{len(cs)} pinned case(s)]  (every :learn must preserve these answers)")
+
+    elif c in (":disable", ":enable"):
+        name = rest.strip()
+        if not name:
+            print(f"  usage: {c} <rule-name>")
+            return
+        if store.set_rule_active(name, c == ":enable"):
+            print(f"  rule '{name}' {'re-enabled' if c == ':enable' else 'disabled (kept on record)'}")
+        else:
+            print(f"  no rule named '{name}' (see :rules)")
+
+    elif c == ":declare":
+        a = rest.split(None, 1)
+        if not a:
+            print("  usage: :declare <relation> [doc]")
+            return
+        store.declare(a[0], a[1] if len(a) > 1 else "")
+        print(f"  declared relation '{a[0]}'")
+
+    elif c == ":strict":
+        on = rest.strip() == "on"
+        store.set_meta("strict", "1" if on else "0")
+        print(f"  strict mode {'ON — asserts with undeclared relations are rejected' if on else 'off'}")
+
+    elif c == ":schema":
+        sch = store.schema()
+        for rel, doc in sorted(sch.items()):
+            print(f"  {rel}" + (f"  — {doc}" if doc else ""))
+        strict = store.get_meta("strict", "0") == "1"
+        print(f"  [{len(sch)} declared relation(s), strict mode {'ON' if strict else 'off'}]")
+
     elif c == ":rewrites":
         rs = store.rewrites()
         for rule in rs:
@@ -217,10 +295,13 @@ def cmd(line, store, llm, state):
         print(f"  [{len(ts)} fact(s)]")
 
     elif c == ":rules":
-        for rule in store.rules():
-            print(f"  {rule.head[1]}: {rule.head[0]} {rule.head[1]} {rule.head[2]}  ⇐  "
-                  + ", ".join("(%s %s %s)" % a for a in rule.body))
-        print(f"  [{len(store.rules())} rule(s)]")
+        active = {r.name for r in store.rules()}
+        rs = store.rules(all=True)
+        for rule in rs:
+            flag = "" if rule.name in active else "  [DISABLED]"
+            print(f"  {rule.name}: {rule.head[0]} {rule.head[1]} {rule.head[2]}  ⇐  "
+                  + ", ".join("(%s %s %s)" % a for a in rule.body) + flag)
+        print(f"  [{len(active)} active / {len(rs)} rule(s)]  (:disable/:enable <name>)")
 
     elif c == ":tools":
         for name, _, tests in store.tools():
@@ -257,6 +338,8 @@ def ask(line, store, llm, state):
         print(f"  could not translate: {e}")
         return
     r = qa.run_action(store, action)
+    if r["kind"] in ("check", "query"):
+        state["last"] = (action, r)                     # so :case can pin it
     print(f"  → {qa.show_answer(r)}")
     print(f"    [{action}]")
     proof = _show_proof(r["trace"])
@@ -278,21 +361,23 @@ def main():
     print(f"provenas — neuro-symbolic engine   (kb: {kb})")
     print(f"  llm: {llm.model} via {llm.backend} @ {llm.host}"
           f"  {'· ready' if ready else '· OFFLINE (:commands still work)'}   ·   :help")
-    while True:
-        try:
-            line = input("provenas> ").strip()
-        except (EOFError, KeyboardInterrupt):
-            print()
-            break
-        if not line:
-            continue
-        if line in (":quit", ":exit", ":q"):
-            break
-        try:
-            (cmd if line.startswith(":") else ask)(line, store, llm, state)
-        except Exception as e:
-            print(f"  error: {e}")
-    store.close()
+    try:
+        while True:
+            try:
+                line = input("provenas> ").strip()
+            except (EOFError, KeyboardInterrupt):
+                print()
+                break
+            if not line:
+                continue
+            if line in (":quit", ":exit", ":q"):
+                break
+            try:
+                (cmd if line.startswith(":") else ask)(line, store, llm, state)
+            except Exception as e:
+                print(f"  error: {e}")
+    finally:
+        store.close()
 
 
 if __name__ == "__main__":

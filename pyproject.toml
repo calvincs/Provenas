@@ -29,6 +29,7 @@ Homepage = "https://github.com/calvincs/Provenas"
 
 [project.scripts]
 provenas = "provenas.cli:main"
+provenas-serve = "provenas.server:main"
 
 [tool.setuptools]
 packages = ["provenas"]

@@ -11,7 +11,11 @@ DOMAINS = [
     dict(
         name="family",
         blurb="a family tree (who is a parent of whom)",
-        vocab="relations: parent, ancestor, grandparent.  people: tom, bob, liz, ann, cy, dan, eve",
+        vocab=("relations are directional, written [subject, relation, object]:\n"
+               "  (p parent c) — p is the parent of c\n"
+               "  (a ancestor d) — a is the ancestor of d  (so 'D's ancestors' = query [\"?x\",\"ancestor\",\"d\"])\n"
+               "  (g grandparent c) — g is the grandparent of c\n"
+               "people: tom, bob, liz, ann, cy, dan, eve"),
         triples=[("tom", "parent", "bob"), ("tom", "parent", "liz"), ("bob", "parent", "ann"),
                  ("bob", "parent", "cy"), ("liz", "parent", "dan"), ("ann", "parent", "eve")],
         rules=[R([("?x", "parent", "?y")], ("?x", "ancestor", "?y"), "ancestor-base"),
@@ -127,6 +131,8 @@ def load(store, name):
     d = get(name)
     if d is None:
         return None
+    for rel in sorted({t[1] for t in d["triples"]} | {r.head[1] for r in d["rules"]}):
+        store.declare(rel)                              # schema first, so :strict stays satisfied
     for t in d["triples"]:
         store.assert_(*t, source="seed")
     for rule in d["rules"]:

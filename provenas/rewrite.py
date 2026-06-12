@@ -213,22 +213,35 @@ def rule_str(rule):
 
 
 def parse(s):
-    """Tiny recursive-descent parser for the rewrite term language: + * ( ) over numbers and variables."""
+    """Tiny recursive-descent parser for the rewrite term language: + * ( ) over numbers and variables.
+    Raises ValueError on anything outside the language (so a bad input is rejected, never mis-read)."""
     import re
-    toks = re.findall(r"\d+|[a-zA-Z_]\w*|[+*()]", s)
+    toks = []
+    for m in re.finditer(r"\d+|[a-zA-Z_]\w*|[+*()]|\S", s):
+        t = m.group()
+        if not (t.isdigit() or t in "+*()" or re.fullmatch(r"[a-zA-Z_]\w*", t)):
+            raise ValueError(f"unexpected {t!r} (the term language is numbers, variables, + * and parens)")
+        toks.append(t)
+    if not toks:
+        raise ValueError("empty expression")
     pos = [0]
 
     def peek():
         return toks[pos[0]] if pos[0] < len(toks) else None
 
     def factor():
-        t = toks[pos[0]]
+        t = peek()
+        if t is None:
+            raise ValueError("unexpected end of expression")
         pos[0] += 1
         if t == "(":
             e = expr()
-            if peek() == ")":
-                pos[0] += 1
+            if peek() != ")":
+                raise ValueError("missing ')'")
+            pos[0] += 1
             return e
+        if t in "+*)":
+            raise ValueError(f"unexpected {t!r}")
         return ("num", int(t)) if t.isdigit() else ("var", t)
 
     def term():
@@ -245,4 +258,7 @@ def parse(s):
             n = ("op", "+", n, term())
         return n
 
-    return expr()
+    node = expr()
+    if peek() is not None:
+        raise ValueError(f"unexpected {peek()!r} after the expression")
+    return node

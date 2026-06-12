@@ -25,6 +25,7 @@ class KnowledgeGraph:
         self.props = defaultdict(dict)                         # symbol -> {key: value}
         self._spo = defaultdict(lambda: defaultdict(set))      # s -> r -> {o}
         self._osr = defaultdict(lambda: defaultdict(set))      # o -> r -> {s}  (reverse index)
+        self._rel = defaultdict(set)                           # r -> {(s, r, o)}
 
     # ---- associate / disassociate ----
     def assert_(self, s, r, o):
@@ -32,12 +33,14 @@ class KnowledgeGraph:
             self.triples.add((s, r, o))
             self._spo[s][r].add(o)
             self._osr[o][r].add(s)
+            self._rel[r].add((s, r, o))
         return self
 
     def retract(self, s, r, o):
         self.triples.discard((s, r, o))
         self._spo[s][r].discard(o)
         self._osr[o][r].discard(s)
+        self._rel[r].discard((s, r, o))
         return self
 
     def set_property(self, sym, key, value):
@@ -60,10 +63,32 @@ class KnowledgeGraph:
         return set(self._osr[o][r])                            # all s with (s, r, o)
 
     # ---- pattern query (variables are strings starting with '?') ----
+    def candidates(self, pattern):
+        """Triples that could match `pattern`, narrowed by the best available index
+        (instead of a full scan). Variable slots are '?'-strings; constants are bound."""
+        s, r, o = pattern
+        sv = isinstance(s, str) and s.startswith("?")
+        rv = isinstance(r, str) and r.startswith("?")
+        ov = isinstance(o, str) and o.startswith("?")
+        if not sv and not rv and not ov:
+            return [(s, r, o)] if (s, r, o) in self.triples else []
+        if not sv and not rv:
+            return [(s, r, x) for x in self._spo.get(s, {}).get(r, ())] if s in self._spo else []
+        if not rv and not ov:
+            return [(x, r, o) for x in self._osr.get(o, {}).get(r, ())] if o in self._osr else []
+        if not sv:
+            return [(s, rr, x) for rr, xs in self._spo.get(s, {}).items() for x in xs
+                    if ov or x == o]
+        if not ov:
+            return [(x, rr, o) for rr, xs in self._osr.get(o, {}).items() for x in xs]
+        if not rv:
+            return self._rel.get(r, ())
+        return self.triples
+
     def query(self, pattern):
         s, r, o = pattern
         out = []
-        for ts, tr, to in self.triples:
+        for ts, tr, to in self.candidates(pattern):
             b, ok = {}, True
             for pat, val in ((s, ts), (r, tr), (o, to)):
                 if isinstance(pat, str) and pat.startswith("?"):
