@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Provenas — answers that show their work</title>
+<meta name="description" content="Provenas is a small neuro-symbolic engine: teach it facts and rules, ask in plain English, and get exact answers with proofs — never hallucinations. Pure-stdlib Python, local-first, MIT.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,900&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#f7f2e7; --paper-deep:#efe7d6; --ink:#221c14; --ink-soft:#5c5347;
+    --ox:#8c2f1b; --ox-bright:#b5421f; --moss:#3d5a3a; --rule:#d9cdb4;
+    --term-bg:#171511; --term-ink:#e8ddc4; --term-dim:#8a7f6a; --term-green:#9fc380;
+    --term-amber:#e0a458; --term-red:#d4756b;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0; background:var(--paper); color:var(--ink);
+    font:400 1.05rem/1.7 "Source Serif 4", Georgia, serif;
+    background-image:
+      repeating-linear-gradient(0deg, transparent 0 31px, rgba(140,47,27,.035) 31px 32px);
+  }
+  ::selection{background:var(--ox); color:var(--paper)}
+  a{color:var(--ox); text-decoration-thickness:1px; text-underline-offset:3px}
+  .shell{max-width:64rem; margin:0 auto; padding:0 1.5rem}
+
+  /* ---------- top bar ---------- */
+  .bar{
+    display:flex; justify-content:space-between; align-items:center; padding:1.1rem 0;
+    font:600 .78rem/1 "IBM Plex Mono", monospace; letter-spacing:.18em; text-transform:uppercase;
+  }
+  .bar .word{color:var(--ink)} .bar .word b{color:var(--ox)}
+  .bar nav{display:flex; gap:1.4rem; flex-wrap:wrap}
+  .bar a{text-decoration:none; color:var(--ink-soft)} .bar a:hover{color:var(--ox)}
+
+  /* ---------- hero ---------- */
+  .hero{padding:4.5rem 0 3rem; border-bottom:3px double var(--ox); position:relative}
+  .hero .ledger-no{
+    font:600 .72rem/1 "IBM Plex Mono", monospace; letter-spacing:.35em; text-transform:uppercase;
+    color:var(--ox); margin-bottom:1.3rem;
+  }
+  .hero h1{
+    font:900 clamp(2.6rem, 7.5vw, 5rem)/1.04 "Fraunces", serif; margin:0; letter-spacing:-.02em;
+    max-width:18ch;
+  }
+  .hero h1 em{font-style:italic; color:var(--ox)}
+  .hero .sub{
+    font-size:1.22rem; line-height:1.65; color:var(--ink-soft); max-width:44ch; margin:1.4rem 0 0;
+  }
+  .cta-row{display:flex; gap:.9rem; flex-wrap:wrap; margin-top:2.1rem}
+  .btn{
+    display:inline-block; padding:.78rem 1.5rem; border-radius:3px; text-decoration:none;
+    font:600 .82rem/1 "IBM Plex Mono", monospace; letter-spacing:.14em; text-transform:uppercase;
+    transition:transform .12s, box-shadow .12s;
+  }
+  .btn:hover{transform:translateY(-2px)}
+  .btn.primary{background:var(--ox); color:var(--paper); box-shadow:0 3px 0 #5e1f10}
+  .btn.primary:hover{background:var(--ox-bright)}
+  .btn.ghost{border:1.5px solid var(--ink); color:var(--ink)}
+  .pipline{
+    margin-top:1.6rem; font:500 .85rem/1 "IBM Plex Mono", monospace; color:var(--ink-soft);
+    background:var(--paper-deep); border:1px solid var(--rule); border-radius:4px;
+    padding:.7rem 1rem; display:inline-block; user-select:all;
+  }
+  .hero .stamp{
+    position:absolute; right:0; top:4.6rem; transform:rotate(2.5deg);
+    border:1.5px solid var(--ox); color:var(--ox); border-radius:2px; padding:.5rem .9rem;
+    font:600 .66rem/1.7 "IBM Plex Mono", monospace; letter-spacing:.2em; text-transform:uppercase;
+    text-align:center;
+  }
+  @media (max-width:760px){.hero .stamp{display:none}}
+
+  /* ---------- sections ---------- */
+  section{padding:3.4rem 0 1rem}
+  .kicker{
+    font:600 .7rem/1 "IBM Plex Mono", monospace; letter-spacing:.32em; text-transform:uppercase;
+    color:var(--ox); margin-bottom:.7rem;
+  }
+  h2{font:600 2rem/1.15 "Fraunces", serif; margin:0 0 1rem; letter-spacing:-.01em}
+  p.wide{max-width:58ch}
+
+  /* ---------- terminal showcase ---------- */
+  .twocol{display:grid; grid-template-columns:1fr 1.15fr; gap:2.4rem; align-items:center}
+  @media (max-width:860px){.twocol{grid-template-columns:1fr}}
+  pre{
+    background:var(--term-bg); color:var(--term-ink); font:400 .82rem/1.62 "IBM Plex Mono", monospace;
+    padding:1.1rem 1.25rem; border-radius:6px; overflow-x:auto; margin:0;
+    box-shadow:0 2px 0 var(--ox), 0 14px 34px -18px rgba(34,28,20,.6);
+  }
+  pre .cap{display:block; color:var(--term-dim); font-size:.66rem; letter-spacing:.22em; text-transform:uppercase; margin:-.15rem 0 .7rem}
+  pre .p{color:var(--term-amber)} pre .u{color:#fff; font-weight:600}
+  pre .g{color:var(--term-green)} pre .d{color:var(--term-dim)} pre .r{color:var(--term-red)}
+  pre .c{color:#7d96b8}
+
+  /* ---------- pillars ---------- */
+  .cards{display:grid; grid-template-columns:repeat(3,1fr); gap:1.2rem; margin-top:1.6rem}
+  @media (max-width:860px){.cards{grid-template-columns:1fr}}
+  .card{
+    border:1px solid var(--rule); border-top:3px solid var(--ox); border-radius:4px;
+    background:rgba(255,255,255,.45); padding:1.2rem 1.3rem 1.3rem;
+  }
+  .card .no{font:900 1.5rem/1 "Fraunces", serif; color:var(--ox)}
+  .card h3{font:600 1.12rem/1.3 "Fraunces", serif; margin:.55rem 0 .45rem}
+  .card p{font-size:.95rem; margin:0; color:var(--ink-soft)}
+  .card a{font-weight:600}
+  .card.use{border-top-color:var(--moss)}
+  .card.use .no{color:var(--moss)}
+  .card .mono{font:600 .72rem/1 "IBM Plex Mono", monospace; letter-spacing:.1em; color:var(--moss)}
+
+  /* ---------- numbers strip ---------- */
+  .numbers{
+    display:grid; grid-template-columns:repeat(4,1fr); gap:1rem; margin:1.8rem 0 .6rem;
+    border-top:1px solid var(--rule); border-bottom:1px solid var(--rule); padding:1.4rem 0;
+  }
+  @media (max-width:760px){.numbers{grid-template-columns:repeat(2,1fr)}}
+  .num{text-align:center}
+  .num .big{font:900 2.1rem/1 "Fraunces", serif; color:var(--ox)}
+  .num .lbl{font:600 .68rem/1.5 "IBM Plex Mono", monospace; letter-spacing:.16em; text-transform:uppercase; color:var(--ink-soft); margin-top:.4rem}
+
+  /* ---------- how it works ---------- */
+  .flow{display:grid; grid-template-columns:1fr auto 1fr auto 1fr; gap:.8rem; align-items:stretch; margin-top:1.6rem}
+  @media (max-width:760px){.flow{grid-template-columns:1fr} .flow .arr{transform:rotate(90deg); justify-self:center}}
+  .step{border:1px solid var(--rule); border-radius:4px; padding:1rem 1.1rem; background:rgba(255,255,255,.45)}
+  .step .t{font:600 .7rem/1 "IBM Plex Mono",monospace; letter-spacing:.22em; text-transform:uppercase; color:var(--ox); margin-bottom:.5rem}
+  .step p{font-size:.92rem; margin:0; color:var(--ink-soft)}
+  .arr{align-self:center; font:900 1.4rem/1 "Fraunces", serif; color:var(--ox)}
+
+  .honest{
+    border-left:3px solid var(--ox); background:rgba(140,47,27,.06); border-radius:0 3px 3px 0;
+    padding:1rem 1.2rem; margin:1.8rem 0 0; font-size:.96rem; max-width:60ch;
+  }
+  .honest .tag{font:600 .65rem/1 "IBM Plex Mono",monospace; letter-spacing:.25em; text-transform:uppercase; color:var(--ox); display:block; margin-bottom:.4rem}
+
+  /* ---------- final cta / footer ---------- */
+  .fin{
+    text-align:center; padding:4rem 0 3.4rem; border-top:3px double var(--ox); margin-top:3.4rem;
+  }
+  .fin h2{font-size:2.2rem}
+  footer{
+    border-top:1px solid var(--rule); padding:1.8rem 1.5rem 2.6rem; text-align:center;
+    font:500 .78rem/1.9 "IBM Plex Mono", monospace; color:var(--ink-soft);
+  }
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <div class="bar">
+    <span class="word">PROVE<b>NAS</b></span>
+    <nav>
+      <a href="tutorial.html">Tutorial</a>
+      <a href="#uses">Uses</a>
+      <a href="#how">How it works</a>
+      <a href="https://github.com/calvincs/Provenas">GitHub</a>
+    </nav>
+  </div>
+
+  <!-- ============================================================ hero -->
+  <header class="hero">
+    <div class="ledger-no">A small neuro-symbolic engine · MIT · pure-stdlib Python</div>
+    <h1>Answers that <em>show their work</em> — from an AI that can't make things up.</h1>
+    <p class="sub">Teach Provenas facts and rules. Ask it questions — in plain English if you like.
+    Every answer comes back with a step-by-step proof, and anything an AI model suggests is
+    <strong>tested before it's allowed in</strong>.</p>
+    <div class="cta-row">
+      <a class="btn primary" href="tutorial.html">Start the tutorial →</a>
+      <a class="btn ghost" href="https://github.com/calvincs/Provenas">View the code</a>
+    </div>
+    <div class="pipline">git clone https://github.com/calvincs/Provenas && cd Provenas && pip install -e .</div>
+    <div class="stamp">verified<br>· exact ·<br>on record</div>
+  </header>
+
+  <!-- ============================================================ proof demo -->
+  <section>
+    <div class="twocol">
+      <div>
+        <div class="kicker">The whole idea, one screenshot</div>
+        <h2>Not "yes." <br>"Yes, <em>because</em>."</h2>
+        <p class="wide">Ask a question and the answer arrives with its receipt: the exact facts
+        and rules that produced it, traced like a math proof. If the answer can't be derived
+        from what it knows, it says so — <em>"not derivable"</em> — instead of guessing.
+        That single behavior is what makes it trustworthy where chatbots aren't.</p>
+        <p class="wide">The AI language model (optional, local or remote) only <em>translates
+        and suggests</em>. A small, exact engine — facts, logic rules, SQLite underneath —
+        does all of the answering.</p>
+      </div>
+<pre><span class="cap">provenas — real session</span><code><span class="p">provenas&gt;</span> <span class="u">Can Alice deploy to production?</span>
+  → <span class="g">yes</span>
+    <span class="d">[{'action': 'check', 'triple':
+      ['alice', 'can', 'prod_deploy']}]</span>
+    <span class="g">(alice can prod_deploy) ⇐ rule[can-do]</span>
+      <span class="g">(alice has_perm deploy_perm)
+                  ⇐ rule[perm-from-role]</span>
+        <span class="d">(alice has_role engineer)  (given fact)</span>
+        <span class="d">(engineer grants deploy_perm) (given fact)</span>
+      <span class="d">(prod_deploy requires deploy_perm) (given fact)</span></code></pre>
+    </div>
+  </section>
+
+  <!-- ============================================================ pillars -->
+  <section>
+    <div class="kicker">Three guarantees</div>
+    <h2>The rules of the house</h2>
+    <div class="cards">
+      <div class="card">
+        <div class="no">I.</div>
+        <h3>Every answer shows its work</h3>
+        <p>Proofs down to the given facts, on every query — for the user, the auditor, and the
+        appeal. The decision log keeps every answer on record.</p>
+      </div>
+      <div class="card">
+        <div class="no">II.</div>
+        <h3>Nothing gets in without a test</h3>
+        <p>AI-drafted rules must reproduce your examples and preserve your pinned decisions.
+        AI-written code is inspected, then run in a locked cage. Fail → rejected, never saved.</p>
+      </div>
+      <div class="card">
+        <div class="no">III.</div>
+        <h3>Local, small, and honest</h3>
+        <p>Pure-stdlib Python on one machine; your data never leaves it. No model connected?
+        It runs as a purely symbolic engine — rules, proofs, and the HTTP service all still work.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ numbers -->
+  <section>
+    <div class="kicker">Measured, not promised</div>
+    <div class="numbers">
+      <div class="num"><div class="big">700×</div><div class="lbl">engine speed-up<br>naive → indexed</div></div>
+      <div class="num"><div class="big">1.15M</div><div class="lbl">facts derived in ~6s<br>from 200k given</div></div>
+      <div class="num"><div class="big">0</div><div class="lbl">runtime dependencies<br>(standard library)</div></div>
+      <div class="num"><div class="big">57</div><div class="lbl">tests, incl. a perf suite<br>that enforces the envelope</div></div>
+    </div>
+  </section>
+
+  <!-- ============================================================ uses -->
+  <section id="uses">
+    <div class="kicker">What people point it at</div>
+    <h2>Real questions it answers</h2>
+    <div class="cards">
+      <div class="card use">
+        <div class="mono">examples/access_audit.py</div>
+        <h3>"Who can touch prod — and why?"</h3>
+        <p>Roles, inheritance, permissions, one suspended contractor. Proof chains for the
+        auditor, what-if analysis by switching a rule off, and a typo-proof schema.
+        <a href="https://github.com/calvincs/Provenas/blob/main/examples/access_audit.py">source →</a></p>
+      </div>
+      <div class="card use">
+        <div class="mono">examples/eligibility_screening.py</div>
+        <h3>"Do I qualify — and why not?"</h3>
+        <p>Benefit rules with age/income thresholds and "unless disqualified." Every verdict
+        carries the derivation an appeal would demand; a pinned case blocks a sloppy rewrite.
+        <a href="https://github.com/calvincs/Provenas/blob/main/examples/eligibility_screening.py">source →</a></p>
+      </div>
+      <div class="card use">
+        <div class="mono">examples/service_sidecar.py</div>
+        <h3>"Can my app just ask over HTTP?"</h3>
+        <p>Yes — <code style="background:none">provenas-serve</code> runs the same knowledge base
+        as a local decision service, proofs riding along in every JSON response.
+        <a href="https://github.com/calvincs/Provenas/blob/main/examples/service_sidecar.py">source →</a></p>
+      </div>
+    </div>
+    <p style="margin-top:1.2rem">All three run offline in seconds — no AI model, nothing extra to
+    install — and the test suite runs them too, so they can't drift from the code.</p>
+  </section>
+
+  <!-- ============================================================ how -->
+  <section id="how">
+    <div class="kicker">How it works</div>
+    <h2>One shape, applied everywhere</h2>
+    <div class="flow">
+      <div class="step"><div class="t">The AI proposes</div>
+        <p>Translates your English into a tiny structured action; drafts candidate rules;
+        drafts small tools. Suggestions only — it is never the authority.</p></div>
+      <div class="arr">→</div>
+      <div class="step"><div class="t">The fabric verifies</div>
+        <p>An exact rule engine (with "unless" and number checks) answers from facts + rules
+        and produces the proof. Proposals are tested against examples, pinned cases, and a
+        sandbox before admission.</p></div>
+      <div class="arr">→</div>
+      <div class="step"><div class="t">SQLite remembers</div>
+        <p>Facts, rules (with on/off history), tools, pinned cases, the schema, and an
+        append-only log of every change <em>and every decision</em> — one portable file.</p></div>
+    </div>
+
+    <div class="honest"><span class="tag">The fine print, up front</span>
+    It only knows what you teach it (it complements search/RAG, doesn't replace it). English
+    understanding tracks the model you connect — the gates make a weak model <em>safe</em>, not smart.
+    One machine, one writer, comfortable into the hundreds of thousands of facts. The full story is in
+    <a href="https://github.com/calvincs/Provenas/blob/main/CONCLUSIONS.md">CONCLUSIONS.md</a>.</div>
+  </section>
+
+  <!-- ============================================================ fin -->
+  <div class="fin">
+    <div class="kicker">Ten short chapters, zero to hero</div>
+    <h2>Point it at something you're<br>tired of answering by hand.</h2>
+    <div class="cta-row" style="justify-content:center">
+      <a class="btn primary" href="tutorial.html">Read the tutorial →</a>
+      <a class="btn ghost" href="https://github.com/calvincs/Provenas#readme">README on GitHub</a>
+    </div>
+  </div>
+</div>
+
+<footer>
+  PROVENAS · MIT © Calvin Schultz ·
+  <a href="https://github.com/calvincs/Provenas">github.com/calvincs/Provenas</a> ·
+  <a href="tutorial.html">tutorial</a><br>
+  the AI suggests — the fact-keeper verifies — nothing gets in without a test
+</footer>
+
+</body>
+</html>

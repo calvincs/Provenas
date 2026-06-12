@@ -95,9 +95,10 @@ Type `:help` for the full command list.
 
 **New here? Two fast ways in:**
 
-- **The zero-to-hero tutorial** — open [`docs/tutorial.html`](docs/tutorial.html) in a browser
-  (clone the repo and double-click it): ten short chapters from first fact to service mode, with
-  real transcripts, a command cheatsheet, and the full action/rule reference.
+- **The zero-to-hero tutorial** — live at
+  **[calvincs.github.io/Provenas](https://calvincs.github.io/Provenas/)**: ten short chapters from
+  first fact to service mode, with real transcripts, a command cheatsheet, and the full action/rule
+  reference. (Also in the repo as [`docs/tutorial.html`](docs/tutorial.html) — works offline.)
 - **Three real-life examples** in [`examples/`](examples/) — each runs offline in seconds, no model,
   no third-party packages (CI runs them too, so they can't rot):
 
@@ -262,7 +263,7 @@ provenas/
   rewrite.py              learned term-rewriting engine + value-preserving rule gate
   toolsmith.py            tool synthesis safety gate (AST allowlist + sandboxed subprocess)
   engine.py typed.py …    the cross-domain reduction engine from the research phases
-docs/tutorial.html        the zero-to-hero tutorial (self-contained; open in a browser)
+docs/                     the website: landing page + zero-to-hero tutorial (calvincs.github.io/Provenas)
 examples/                 real-life walkthroughs: access audit, eligibility screening, HTTP sidecar
 experiments/              one script per result (the table above)
 tests/sanity.py           fast checks for every component (no training, no LLM)
