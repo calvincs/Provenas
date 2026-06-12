@@ -149,8 +149,8 @@ def cmd(line, store, llm, state):
             try:
                 rule = llm.propose_rule(f"Define '{rel}'. {desc.strip()}{_feedback(rep)}", ctx)
             except Exception as e:
-                print(f"  (revision failed: {e})")
-                break
+                print(f"  (revision unparseable, retrying: {e})")
+                continue                                   # a garbled reply costs a try, not the whole :learn
             print(f"  revised:  {_rule_str(rule)}")
             if _rule_str(rule) in seen:                        # LLM repeating itself — stop wasting calls
                 print("  (no change from feedback — stopping)")
@@ -352,8 +352,19 @@ def ask(line, store, llm, state):
             pass
 
 
+USAGE = """usage: provenas [kb.db]
+
+Opens (or creates) a persistent SQLite knowledge base and starts the REPL.
+Default kb: provenas.db. Natural-language ask needs a model (see PROVENAS_LLM_*
+environment variables); every :command works without one. Type :help inside.
+"""
+
+
 def main():
     kb = sys.argv[1] if len(sys.argv) > 1 else "provenas.db"
+    if kb in ("-h", "--help") or kb.startswith("-"):
+        print(USAGE, end="")
+        return
     store = Store(kb)
     llm = LLM()
     ready = llm.ping()

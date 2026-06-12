@@ -189,6 +189,10 @@ curl -s localhost:8642/action -d '{"action":"check","triple":["alice","can","pro
 # {"kind": "check", "answer": true, "trace": "(alice can prod_deploy)   ⇐ rule[can-do]\n  ..."}
 ```
 
+Status codes follow HTTP semantics: a malformed or unknown action is **400** (the body still says why),
+a bad/missing bearer token is **401**, `/ask` without a reachable model is **503** — so a client can
+never mistake "bad request" for an exact "no".
+
 Two end-to-end demo scripts reproduce the headline results:
 `python -m experiments.rules_toy` (NL → proof across three domains, 9/9) and
 `python -m experiments.rule_learning` (learn `grandparent`/`sibling`/`uncle`, gated).
@@ -280,6 +284,9 @@ pip install -e ".[research]" && pytest   # also runs the Phase 1-5 research test
 - `tests/test_stress.py` — adversarial inputs: cyclic/recursive rules, malformed actions, and a battery of
   sandbox-escape attempts the tool gate must reject.
 - `tests/test_perf.py` — the published performance envelope, enforced (a return to naive evaluation fails).
+- `tests/test_reallife.py` — deployment-shaped scenarios: an RBAC org lifecycle (negation, guards,
+  retraction, restart), the HTTP service under concurrent mixed load, kill -9 crash recovery,
+  two handles on one KB file, and extra sandbox-escape attempts.
 - `tests/test_research.py` — the distillation phases; auto-skipped if torch/numpy aren't installed.
 - `python -m tests.sanity` — the same fast checks as a plain script, no pytest needed.
 

@@ -11,6 +11,8 @@ and carrying its derivation. The LLM layer is optional — /action needs no mode
   POST /ask    {"q": "natural language question"}      translate (needs a model) -> exact answer
 
 Auth: set PROVENAS_API_TOKEN to require  Authorization: Bearer <token>  on every request.
+Status codes are honest HTTP: malformed/unknown action -> 400, bad token -> 401, no model for /ask -> 503,
+model failed mid-translate -> 502. A 200 always carries a real decision.
 Run:  provenas-serve [kb.db] [port]      (default kb provenas.db, port 8642 / $PROVENAS_PORT)
 """
 from __future__ import annotations
@@ -79,7 +81,9 @@ def make_handler(store, llm, token):
             with store.lock:
                 if self.path == "/action":
                     try:
-                        self._send(200, qa.run_action(store, payload))
+                        r = qa.run_action(store, payload)
+                        # a malformed/unknown action is a client error, not a decision
+                        self._send(400 if r["kind"] == "error" else 200, r)
                     except Exception as e:
                         self._send(400, {"error": str(e)})
                 elif self.path == "/ask":
@@ -89,7 +93,7 @@ def make_handler(store, llm, token):
                         action = llm.translate(str(payload.get("q", "")), qa.context_from_store(store))
                         r = qa.run_action(store, action)
                         r["action"] = action
-                        self._send(200, r)
+                        self._send(502 if r["kind"] == "error" else 200, r)
                     except Exception as e:
                         self._send(502, {"error": str(e)})
                 else:
@@ -108,8 +112,20 @@ def serve(kb="provenas.db", port=8642, host="127.0.0.1", token=None, with_llm=Tr
     return store, server
 
 
+USAGE = """usage: provenas-serve [kb.db] [port]
+
+Serves the knowledge base as a local HTTP decision service (default kb
+provenas.db, port 8642 / $PROVENAS_PORT, bind $PROVENAS_BIND or 0.0.0.0).
+Set PROVENAS_API_TOKEN to require Bearer auth. Endpoints: GET /health
+/facts /rules /schema, POST /action /ask.
+"""
+
+
 def main():
     kb = sys.argv[1] if len(sys.argv) > 1 else "provenas.db"
+    if kb in ("-h", "--help") or kb.startswith("-"):
+        print(USAGE, end="")
+        return
     port = int(sys.argv[2]) if len(sys.argv) > 2 else int(os.environ.get("PROVENAS_PORT", "8642"))
     host = os.environ.get("PROVENAS_BIND", "0.0.0.0")
     token = os.environ.get("PROVENAS_API_TOKEN")

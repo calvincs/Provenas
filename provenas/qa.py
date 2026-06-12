@@ -24,6 +24,16 @@ def context_from_store(store, blurb=""):
     relations + a few sample facts so the LLM can see each relation's argument order."""
     blurb = blurb or store.get_meta("vocab", "")
     if blurb:
+        # the pack vocab is a snapshot — also surface anything asserted since,
+        # or the LLM cannot ground questions about the new entities/relations
+        extra_rels = sorted(r for r in store.relations() if r not in blurb)
+        extra_ents = sorted(e for e in store.entities() if e not in blurb)[:40]
+        if extra_rels or extra_ents:
+            blurb += "\nAlso in the KB now:"
+            if extra_rels:
+                blurb += " relations: " + ", ".join(extra_rels) + "."
+            if extra_ents:
+                blurb += " entities: " + ", ".join(extra_ents) + "."
         return blurb + "\n" + SCHEMA
     rels = sorted(store.relations())
     ents = sorted(store.entities())

@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import json
 import os
+import urllib.error
 import urllib.request
 
 
@@ -54,6 +55,18 @@ class LLM:
         return self._post("/api/chat", body)["message"]["content"]
 
     def ping(self):
+        """Probe reachability with a SHORT timeout first — startup must not hang for minutes on an
+        unroutable host — then one tiny generation with the full timeout (a cold model may need to load)."""
+        probe = "/v1/models" if self.backend == "openai" else "/api/version"
+        headers = {"Authorization": "Bearer " + self.api_key} if self.api_key else {}
+        try:
+            urllib.request.urlopen(urllib.request.Request(self.host + probe, headers=headers),
+                                   timeout=5).read()
+        except urllib.error.HTTPError:
+            pass                                           # an HTTP error is still a reachable server
+        except Exception:
+            self.available = False
+            return False
         try:
             self._chat([{"role": "user", "content": "reply with: ok"}], num_predict=8)
             self.available = True

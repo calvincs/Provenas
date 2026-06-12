@@ -3,6 +3,7 @@
 Each must exit 0 (they contain their own asserts) and print its closing line.
 All are pure stdlib and LLM-free by design.
 """
+import os
 import pathlib
 import subprocess
 import sys
@@ -18,8 +19,12 @@ EXAMPLES = {
 
 
 def _run(name):
+    # Prepend the repo root so the examples run from a fresh clone,
+    # whether or not the package has been pip-installed.
+    env = dict(os.environ)
+    env["PYTHONPATH"] = str(ROOT) + os.pathsep + env.get("PYTHONPATH", "")
     return subprocess.run([sys.executable, str(ROOT / "examples" / name)],
-                          capture_output=True, text=True, timeout=120, cwd=ROOT)
+                          capture_output=True, text=True, timeout=120, cwd=ROOT, env=env)
 
 
 def test_examples_run_clean():
