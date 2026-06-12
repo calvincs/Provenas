@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Provenas — Zero to Hero</title>
+<meta name="description" content="A zero-to-hero tutorial for Provenas: the small neuro-symbolic engine. Facts, rules, proofs, guardrails, the LLM layer, service mode, and the Python API.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,900&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#f7f2e7; --paper-deep:#efe7d6; --ink:#221c14; --ink-soft:#5c5347;
+    --ox:#8c2f1b; --ox-bright:#b5421f; --moss:#3d5a3a; --rule:#d9cdb4;
+    --term-bg:#171511; --term-ink:#e8ddc4; --term-dim:#8a7f6a; --term-green:#9fc380;
+    --term-amber:#e0a458; --term-red:#d4756b; --maxw:46rem;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth; scroll-padding-top:2rem}
+  body{
+    margin:0; background:var(--paper); color:var(--ink);
+    font:400 1.04rem/1.72 "Source Serif 4", Georgia, serif;
+    background-image:
+      repeating-linear-gradient(0deg, transparent 0 31px, rgba(140,47,27,.035) 31px 32px);
+  }
+  ::selection{background:var(--ox); color:var(--paper)}
+
+  /* ---------- masthead ---------- */
+  header.mast{
+    border-bottom:3px double var(--ox);
+    padding:4.5rem 1.5rem 2.5rem; text-align:center; position:relative; overflow:hidden;
+  }
+  .mast .ledger-no{
+    font:600 .72rem/1 "IBM Plex Mono", monospace; letter-spacing:.35em; text-transform:uppercase;
+    color:var(--ox); margin-bottom:1.4rem;
+  }
+  .mast h1{
+    font:900 clamp(3rem, 9vw, 5.6rem)/1 "Fraunces", serif; margin:0;
+    letter-spacing:-.02em;
+  }
+  .mast h1 .ox{color:var(--ox)}
+  .mast .sub{
+    font:400 1.2rem/1.6 "Source Serif 4", serif; font-style:italic;
+    color:var(--ink-soft); max-width:38rem; margin:1.2rem auto 0;
+  }
+  .mast .stamp{
+    display:inline-block; margin-top:1.8rem; padding:.45rem 1.1rem;
+    border:1.5px solid var(--ink); border-radius:2px;
+    font:600 .7rem/1 "IBM Plex Mono", monospace; letter-spacing:.22em; text-transform:uppercase;
+    transform:rotate(-1.2deg);
+  }
+  .mast .stamp b{color:var(--ox)}
+
+  /* ---------- layout: ledger margin + body ---------- */
+  .wrap{display:grid; grid-template-columns:15.5rem minmax(0,1fr); max-width:72rem; margin:0 auto;}
+  nav.toc{
+    position:sticky; top:0; align-self:start; height:100vh; overflow-y:auto;
+    padding:2.4rem 1.4rem 2.4rem 1.6rem; border-right:1px solid var(--rule);
+    font:500 .82rem/1.5 "IBM Plex Mono", monospace;
+  }
+  nav.toc .toc-title{
+    font-size:.68rem; letter-spacing:.3em; text-transform:uppercase; color:var(--ox);
+    margin-bottom:1rem; font-weight:600;
+  }
+  nav.toc a{
+    display:block; color:var(--ink-soft); text-decoration:none; padding:.34rem 0 .34rem .9rem;
+    border-left:2px solid transparent; transition:all .15s;
+  }
+  nav.toc a:hover{color:var(--ink)}
+  nav.toc a.on{color:var(--ox); border-left-color:var(--ox); font-weight:600}
+  nav.toc a .n{opacity:.55; margin-right:.5em}
+  main{padding:1rem 1.5rem 6rem; max-width:calc(var(--maxw) + 3rem)}
+
+  /* ---------- chapters ---------- */
+  section.ch{padding-top:3.6rem}
+  .ch-head{display:flex; align-items:baseline; gap:1rem; border-bottom:1px solid var(--rule); padding-bottom:.7rem; margin-bottom:1.4rem}
+  .ch-head .num{
+    font:900 2.6rem/1 "Fraunces", serif; color:var(--ox); min-width:2.4rem;
+  }
+  .ch-head h2{font:600 1.9rem/1.15 "Fraunces", serif; margin:0; letter-spacing:-.01em}
+  h3{font:600 1.22rem/1.3 "Fraunces", serif; margin:2.2rem 0 .6rem; color:var(--ink)}
+  p{margin:.85rem 0}
+  a{color:var(--ox); text-decoration-thickness:1px; text-underline-offset:3px}
+  strong{font-weight:600}
+  .lead{font-size:1.13rem; font-style:italic; color:var(--ink-soft)}
+  ul{padding-left:1.3rem} li{margin:.4rem 0}
+  .marginal{
+    border-left:3px solid var(--moss); background:rgba(61,90,58,.07);
+    padding:.8rem 1.1rem; margin:1.3rem 0; font-size:.95rem; border-radius:0 3px 3px 0;
+  }
+  .marginal .tag{font:600 .65rem/1 "IBM Plex Mono",monospace; letter-spacing:.25em; text-transform:uppercase; color:var(--moss); display:block; margin-bottom:.35rem}
+  .caution{border-left-color:var(--ox); background:rgba(140,47,27,.06)}
+  .caution .tag{color:var(--ox)}
+
+  /* ---------- code & terminals ---------- */
+  pre, code{font-family:"IBM Plex Mono", ui-monospace, monospace}
+  code{font-size:.86em; background:var(--paper-deep); padding:.1em .35em; border-radius:3px}
+  pre{
+    background:var(--term-bg); color:var(--term-ink); font-size:.83rem; line-height:1.62;
+    padding:1.05rem 1.2rem; border-radius:6px; overflow-x:auto; margin:1.2rem 0;
+    box-shadow:0 2px 0 var(--ox), 0 10px 28px -16px rgba(34,28,20,.55);
+  }
+  pre code{background:none; padding:0; font-size:inherit}
+  pre .cap{
+    display:block; color:var(--term-dim); font-size:.68rem; letter-spacing:.22em;
+    text-transform:uppercase; margin:-.2rem 0 .7rem; user-select:none;
+  }
+  pre .p{color:var(--term-amber)}        /* prompt */
+  pre .u{color:#fff; font-weight:600}    /* user input */
+  pre .g{color:var(--term-green)}        /* good / derived */
+  pre .d{color:var(--term-dim)}          /* dim / provenance */
+  pre .r{color:var(--term-red)}          /* rejected / error */
+  pre .c{color:#7d96b8}                  /* comment */
+  pre .k{color:var(--term-amber)}        /* keyword-ish */
+
+  table{border-collapse:collapse; width:100%; margin:1.2rem 0; font-size:.92rem}
+  th{font:600 .7rem/1.4 "IBM Plex Mono",monospace; letter-spacing:.18em; text-transform:uppercase;
+     text-align:left; color:var(--ox); border-bottom:2px solid var(--ox); padding:.45rem .6rem .45rem 0}
+  td{border-bottom:1px solid var(--rule); padding:.5rem .6rem .5rem 0; vertical-align:top}
+  td code{white-space:nowrap}
+  td:first-child{font-family:"IBM Plex Mono",monospace; font-size:.84rem}
+
+  .ch-sep{display:flex; align-items:center; gap:.8rem; margin:3.4rem 0 0; color:var(--ox); justify-content:center}
+  .ch-sep::before,.ch-sep::after{content:""; height:1px; background:var(--rule); flex:1}
+
+  footer{
+    border-top:3px double var(--ox); margin-top:4rem; padding:2.2rem 1.5rem 3rem;
+    text-align:center; font:500 .8rem/1.8 "IBM Plex Mono",monospace; color:var(--ink-soft);
+  }
+  footer a{color:var(--ox)}
+
+  @media (max-width:860px){
+    .wrap{grid-template-columns:1fr}
+    nav.toc{position:static; height:auto; border-right:none; border-bottom:1px solid var(--rule);
+            display:flex; flex-wrap:wrap; gap:.1rem .9rem; padding:1rem 1.5rem}
+    nav.toc .toc-title{width:100%}
+    nav.toc a{border-left:none; padding:.15rem 0}
+  }
+</style>
+</head>
+<body>
+
+<header class="mast">
+  <div class="ledger-no">Field Manual · No. 001</div>
+  <h1>Prove<span class="ox">nas</span></h1>
+  <p class="sub">Zero to hero with the small neuro-symbolic engine: ask in plain English,
+  get answers that are exact, proven, and never hallucinated.</p>
+  <div class="stamp">every answer <b>carries its proof</b> · nothing admitted <b>without a test</b></div>
+</header>
+
+<div class="wrap">
+<nav class="toc" id="toc">
+  <div class="toc-title">Ledger</div>
+  <a href="#ch0"><span class="n">00</span>The idea in 60 seconds</a>
+  <a href="#ch1"><span class="n">01</span>Install &amp; first facts</a>
+  <a href="#ch2"><span class="n">02</span>Rules &amp; proofs</a>
+  <a href="#ch3"><span class="n">03</span>Negation &amp; comparisons</a>
+  <a href="#ch4"><span class="n">04</span>Guardrails</a>
+  <a href="#ch5"><span class="n">05</span>The English layer</a>
+  <a href="#ch6"><span class="n">06</span>The decision sidecar</a>
+  <a href="#ch7"><span class="n">07</span>The Python API</a>
+  <a href="#ch8"><span class="n">08</span>Worked real-life examples</a>
+  <a href="#ch9"><span class="n">09</span>Reference &amp; honest limits</a>
+</nav>
+
+<main>
+
+<!-- ================================================================ 0 -->
+<section class="ch" id="ch0">
+  <div class="ch-head"><span class="num">00</span><h2>The idea in 60 seconds</h2></div>
+  <p class="lead">LLMs are wonderful at language and terrible at being trusted.
+  Provenas splits the job in two.</p>
+  <p>An <strong>LLM proposes</strong> — it translates your question into a tiny structured action,
+  drafts rules, drafts code. An <strong>exact symbolic fabric verifies and answers</strong> —
+  a knowledge base of facts and logic rules, evaluated by a real Datalog engine, with SQLite
+  underneath remembering everything. The model is the mouth and hands; the fabric is the
+  source of truth.</p>
+  <p>Two consequences fall out of that split:</p>
+  <ul>
+    <li><strong>Every answer carries its derivation.</strong> Not "yes", but
+        "yes, <em>because</em> these facts and these rules" — a proof tree down to the given facts.</li>
+    <li><strong>Nothing is admitted without a test.</strong> A learned rule must derive every
+        positive example and no negative one, must not flip any decision you've pinned, and a
+        synthesized tool must survive static analysis <em>and</em> a sandboxed run.
+        A wrong proposal is rejected; it never touches the store.</li>
+  </ul>
+  <p>When the model mis-reads you, the fabric says <em>"not derivable"</em> — an honest no,
+  never a confident invention. That property is the whole point.</p>
+</section>
+
+<!-- ================================================================ 1 -->
+<section class="ch" id="ch1">
+  <div class="ch-head"><span class="num">01</span><h2>Install &amp; your first facts</h2></div>
+  <p>The engine and CLI are pure Python standard library — no heavy dependencies.</p>
+<pre><span class="cap">shell</span><code><span class="c"># Python 3.10+</span>
+git clone https://github.com/calvincs/Provenas && cd Provenas
+pip install -e .
+provenas mykb.db        <span class="c"># opens (or creates) a persistent SQLite knowledge base</span></code></pre>
+
+  <p>Everything in the knowledge base is a <strong>fact</strong>: a triple of
+  <code>(subject, relation, object)</code>. Add some, query them, and ask <em>why</em>:</p>
+
+<pre><span class="cap">provenas — the CLI</span><code><span class="p">provenas&gt;</span> <span class="u">:assert tom parent bob</span>
+  added (tom parent bob)
+<span class="p">provenas&gt;</span> <span class="u">:assert bob parent ann</span>
+  added (bob parent ann)
+<span class="p">provenas&gt;</span> <span class="u">:facts</span>
+  (bob parent ann)
+  (tom parent bob)
+  [2 fact(s)]
+<span class="p">provenas&gt;</span> <span class="u">:why tom parent bob</span>
+  <span class="g">yes</span>
+    <span class="d">(tom parent bob)   (given fact)</span></code></pre>
+
+  <div class="marginal"><span class="tag">No model needed yet</span>
+  Every <code>:command</code> works completely offline. The English layer (chapter 05) is an
+  optional add-on, never a requirement — and never the authority.</div>
+
+  <p>Don't want to type facts by hand? Five starter packs ship in the box:
+  <code>:load family</code>, <code>rbac</code>, <code>diagnostics</code>,
+  <code>eligibility</code>, or <code>config</code>.</p>
+</section>
+
+<!-- ================================================================ 2 -->
+<section class="ch" id="ch2">
+  <div class="ch-head"><span class="num">02</span><h2>Rules, derived facts, and proofs</h2></div>
+  <p>Facts you state; <strong>rules</strong> derive what they imply. A rule is a Horn clause —
+  "if all the body atoms hold, the head holds" — written with <code>?variables</code>.
+  Load the access-control pack and look at one:</p>
+
+<pre><span class="cap">provenas</span><code><span class="p">provenas&gt;</span> <span class="u">:load rbac</span>
+  loaded 'rbac'
+<span class="p">provenas&gt;</span> <span class="u">:rules</span>
+  role-inherit: ?u has_role ?r2  ⇐  (?u has_role ?r), (?r inherits ?r2)
+  perm-from-role: ?u has_perm ?p  ⇐  (?u has_role ?r), (?r grants ?p)
+  can-do: ?u can ?a  ⇐  (?u has_perm ?p), (?a requires ?p)
+  [3 active / 3 rule(s)]  (:disable/:enable &lt;name&gt;)</code></pre>
+
+  <p>The engine forward-chains those rules to a fixpoint — and <em>materializes</em> the result,
+  so queries are answered from a cache that only recomputes when facts or rules change.
+  Ask something the rules imply, and the proof tree comes back with it:</p>
+
+<pre><span class="cap">provenas</span><code><span class="p">provenas&gt;</span> <span class="u">:why alice can prod_deploy</span>
+  <span class="g">yes</span>
+    <span class="g">(alice can prod_deploy)   ⇐ rule[can-do]</span>
+      <span class="g">(alice has_perm deploy_perm)   ⇐ rule[perm-from-role]</span>
+        <span class="d">(alice has_role engineer)   (given fact)</span>
+        <span class="d">(engineer grants deploy_perm)   (given fact)</span>
+      <span class="d">(prod_deploy requires deploy_perm)   (given fact)</span></code></pre>
+
+  <p>Read it bottom-up: two given facts make <code>alice has_perm deploy_perm</code>;
+  that plus a third fact makes <code>alice can prod_deploy</code>. This is what
+  "explainable" means here — not a narrative, a <em>derivation</em>.</p>
+
+  <div class="marginal"><span class="tag">Scale, measured</span>
+  The evaluator is indexed, semi-naive, stratified Datalog: 50,000 base facts close to a
+  287,000-fact knowledge base in ~1.3&nbsp;s; 200,000 → 1.15&nbsp;M in ~6&nbsp;s; reads from the
+  materialized closure are sub-millisecond. <code>tests/test_perf.py</code> enforces the envelope.</div>
+</section>
+
+<!-- ================================================================ 3 -->
+<section class="ch" id="ch3">
+  <div class="ch-head"><span class="num">03</span><h2>Real policy: negation &amp; comparisons</h2></div>
+  <p>Real rules are rarely just lookups. They say <em>"unless"</em> and they compare numbers.
+  Rule bodies support three kinds of atom:</p>
+
+  <table>
+    <tr><th>atom</th><th>meaning</th></tr>
+    <tr><td><code>["?u", "has_role", "?r"]</code></td>
+        <td><strong>Lookup</strong> — joins against the stored + derived facts.</td></tr>
+    <tr><td><code>["?u", "~suspended", "?x"]</code></td>
+        <td><strong>Negation</strong> (<code>~rel</code>) — holds iff <em>no</em> matching fact exists
+            (NOT&nbsp;EXISTS). Evaluation is stratified: anything that can be <code>suspended</code> is fully
+            derived before anything that depends on <em>not</em> being suspended. A negation cycle is
+            rejected outright.</td></tr>
+    <tr><td><code>["?age", "&gt;=", "65"]</code></td>
+        <td><strong>Guard</strong> — <code>!=</code> <code>==</code> <code>&lt;</code> <code>&lt;=</code>
+            <code>&gt;</code> <code>&gt;=</code>, compared numerically when both sides are numbers
+            (ISO dates also order correctly as strings).</td></tr>
+  </table>
+
+  <p>Which makes "allowed unless suspended" and "qualifies at 65+" one-liners:</p>
+
+<pre><span class="cap">python — rules as data</span><code><span class="k">Rule</span>([(<span class="g">"?u"</span>, <span class="g">"can"</span>, <span class="g">"?a"</span>), (<span class="g">"?u"</span>, <span class="g">"~suspended"</span>, <span class="g">"?when"</span>)],
+     (<span class="g">"?u"</span>, <span class="g">"allowed"</span>, <span class="g">"?a"</span>), <span class="g">"allowed"</span>)          <span class="c"># capable AND not suspended</span>
+
+<span class="k">Rule</span>([(<span class="g">"?p"</span>, <span class="g">"age"</span>, <span class="g">"?a"</span>), (<span class="g">"?a"</span>, <span class="g">"&gt;="</span>, <span class="g">"65"</span>)],
+     (<span class="g">"?p"</span>, <span class="g">"eligible_for"</span>, <span class="g">"senior_discount"</span>), <span class="g">"senior-65plus"</span>)</code></pre>
+
+  <p>And the proof still tells the whole story — the contractor below is <em>capable</em> of pushing
+  to main, but not <em>allowed</em>, and the system can show you both:</p>
+
+<pre><span class="cap">examples/access_audit.py (real output)</span><code>[audit] Is the contractor CAPABLE of pushing to main?  (raw permission)
+        -&gt; <span class="g">yes</span>
+[audit] ...but is he ALLOWED?  (suspension wins — negation, not a special case)
+        -&gt; <span class="r">no</span>
+        <span class="d">(dev_dan allowed main_branch) is not derivable from the facts + rules.</span></code></pre>
+</section>
+
+<!-- ================================================================ 4 -->
+<section class="ch" id="ch4">
+  <div class="ch-head"><span class="num">04</span><h2>Guardrails: cases, schema, history, log</h2></div>
+  <p>This is the chapter that makes it production-shaped rather than a demo.</p>
+
+  <h3>Pin decisions — CI for rules</h3>
+  <p>After any answer, pin it. From then on, <em>every</em> rule change is replayed against your
+  pinned cases, and a rule that flips one is rejected — even if its own examples pass:</p>
+<pre><span class="cap">provenas</span><code><span class="p">provenas&gt;</span> <span class="u">:why alice can prod_deploy</span>
+  <span class="g">yes</span> <span class="d">…proof…</span>
+<span class="p">provenas&gt;</span> <span class="u">:case alice-prod</span>
+  pinned case 'alice-prod': {'action': 'check', 'triple': ['alice', 'can', 'prod_deploy']} -&gt; True
+  (rule changes must preserve it)</code></pre>
+
+  <h3>Strict schema — a typo can't corrupt the data</h3>
+<pre><span class="cap">provenas</span><code><span class="p">provenas&gt;</span> <span class="u">:strict on</span>
+  strict mode ON — asserts with undeclared relations are rejected
+<span class="p">provenas&gt;</span> <span class="u">:assert bob hsa_role intern</span>
+  <span class="r">error: relation 'hsa_role' is not declared in the schema (strict mode)</span></code></pre>
+  <p>Starter packs declare their relations automatically; declare your own with
+  <code>:declare has_role "person holds role"</code>.</p>
+
+  <h3>Rules have history, not just state</h3>
+<pre><span class="cap">provenas</span><code><span class="p">provenas&gt;</span> <span class="u">:disable can-do</span>
+  rule 'can-do' disabled (kept on record)
+<span class="p">provenas&gt;</span> <span class="u">:why alice can prod_deploy</span>
+  <span class="r">no</span>
+<span class="p">provenas&gt;</span> <span class="u">:enable can-do</span>
+  rule 'can-do' re-enabled</code></pre>
+  <p>The materialized closure updates the moment a rule's status changes — that's also your
+  <strong>what-if analysis</strong>: disable a rule, see exactly which access or eligibility evaporates,
+  re-enable it.</p>
+
+  <h3>The decision log</h3>
+  <p>The audit log (<code>:log</code>) records every change <em>and every decision</em> — each
+  query/check with its answer — so "what did the system say last Tuesday and why" has an answer.</p>
+</section>
+
+<!-- ================================================================ 5 -->
+<section class="ch" id="ch5">
+  <div class="ch-head"><span class="num">05</span><h2>The English layer</h2></div>
+  <p>Connect any chat model and the same knowledge base becomes conversational. The model only ever
+  emits a small JSON action (<code>query</code> / <code>check</code> / <code>assert</code>);
+  the fabric executes it exactly.</p>
+
+<pre><span class="cap">shell — three ways to connect a model</span><code><span class="c"># 1. Local Ollama (the default — nothing to set)</span>
+ollama pull qwen3.5:9b
+
+<span class="c"># 2. Remote Ollama server</span>
+export PROVENAS_LLM_HOST=http://my-server:11434
+export PROVENAS_LLM_MODEL=qwen3.5:9b
+
+<span class="c"># 3. Any OpenAI-compatible API (OpenAI, OpenRouter, vLLM, LM Studio, llama.cpp, …)</span>
+export PROVENAS_LLM_BACKEND=openai
+export PROVENAS_LLM_HOST=https://api.openai.com
+export PROVENAS_LLM_API_KEY=sk-...
+export PROVENAS_LLM_MODEL=gpt-4o-mini</code></pre>
+
+<pre><span class="cap">provenas</span><code><span class="p">provenas&gt;</span> <span class="u">Can Alice deploy to production?</span>
+  → <span class="g">yes</span>
+    <span class="d">[{'action': 'check', 'triple': ['alice', 'can', 'prod_deploy']}]</span>
+    <span class="g">(alice can prod_deploy)   ⇐ rule[can-do]</span>
+      <span class="d">…the full proof, as in chapter 02…</span></code></pre>
+
+  <h3>Teach it a rule — through the gate</h3>
+  <p><code>:learn</code> asks the model to draft a rule from your description and ± example pairs.
+  The gate tests it; if it fails, the verdict is fed back and the model revises; if it still fails,
+  it's rejected. Only a verified rule is ever committed.</p>
+<pre><span class="cap">provenas</span><code><span class="p">provenas&gt;</span> <span class="u">:load family</span>
+<span class="p">provenas&gt;</span> <span class="u">:learn sibling : share a parent, different people :: ann,cy cy,ann | ann,ann ann,dan</span>
+  proposed: sibling ⇐ (?p parent ?x), (?p parent ?y), (?x != ?y)
+  -&gt; <span class="g">ADMITTED (saved)</span>  (missing=[] violated=[])</code></pre>
+
+  <h3>Grow a tool — safe and correct, or not at all</h3>
+<pre><span class="cap">provenas</span><code><span class="p">provenas&gt;</span> <span class="u">:tool gcd : greatest common divisor of a and b :: gcd(12,8)=4, gcd(7,5)=1</span>
+  proposed:
+      def gcd(a, b):
+          if b == 0:
+              return a
+          return gcd(b, a % b)
+  -&gt; <span class="g">ADMITTED (saved): all 2 examples passed</span>
+<span class="p">provenas&gt;</span> <span class="u">:call gcd 48 36</span>
+  gcd(48, 36) = 12</code></pre>
+  <p>LLM-written code is admitted only after an AST allowlist (no imports, no attribute access,
+  no dangerous builtins) <em>and</em> a resource-limited sandboxed run against your examples.
+  An <code>import os</code> dies statically; an infinite loop is killed by the sandbox; a wrong
+  implementation fails the tests.</p>
+
+  <div class="marginal caution"><span class="tag">Honest note</span>
+  Translation quality tracks the model. A small model occasionally inverts a relation's direction —
+  the fabric then answers "not derivable" rather than something false, and a stronger model
+  (<code>PROVENAS_LLM_MODEL=qwen3.5:27b-q4_K_M</code>) fixes it. The gates are what make a weak
+  model <em>safe</em>, not smart.</div>
+</section>
+
+<!-- ================================================================ 6 -->
+<section class="ch" id="ch6">
+  <div class="ch-head"><span class="num">06</span><h2>The decision sidecar</h2></div>
+  <p>Run the same knowledge base as a local HTTP service — the way OPA runs beside an app,
+  except every answer carries its proof. <code>POST /action</code> needs no model at all.</p>
+
+<pre><span class="cap">shell</span><code>export PROVENAS_API_TOKEN=sekrit        <span class="c"># optional bearer auth</span>
+provenas-serve mykb.db 8642</code></pre>
+
+<pre><span class="cap">your service (any language)</span><code>curl -s -H "Authorization: Bearer sekrit" localhost:8642/action \
+     -d '{"action":"check","triple":["alice","can","prod_deploy"]}'
+
+<span class="g">{"kind": "check", "answer": true,
+ "trace": "(alice can prod_deploy)   ⇐ rule[can-do]\n  (alice has_perm deploy_perm) …"}</span></code></pre>
+
+  <table>
+    <tr><th>endpoint</th><th>does</th></tr>
+    <tr><td><code>GET /health</code></td><td>liveness + fact/rule counts + model reachability</td></tr>
+    <tr><td><code>POST /action</code></td><td>exact <code>query</code>/<code>check</code>/<code>assert</code> — no model needed</td></tr>
+    <tr><td><code>POST /ask</code></td><td><code>{"q": "plain English"}</code> → translate → exact answer (needs a model)</td></tr>
+    <tr><td><code>GET /facts?contains=x</code></td><td>browse stored facts</td></tr>
+    <tr><td><code>GET /rules</code> · <code>GET /schema</code></td><td>active rules · declared relations + strict flag</td></tr>
+  </table>
+
+  <p>Single-writer by design: one process owns the SQLite file; the server serializes access
+  (WAL + lock). It's a sidecar, not a distributed database.</p>
+</section>
+
+<!-- ================================================================ 7 -->
+<section class="ch" id="ch7">
+  <div class="ch-head"><span class="num">07</span><h2>The Python API</h2></div>
+  <p>Everything the CLI does is a thin layer over a small library. The five objects that matter:</p>
+
+<pre><span class="cap">python</span><code><span class="k">from</span> provenas.store <span class="k">import</span> Store
+<span class="k">from</span> provenas.infer <span class="k">import</span> Rule
+<span class="k">from</span> provenas.learn <span class="k">import</span> admit_rule
+<span class="k">from</span> provenas <span class="k">import</span> qa
+
+store = Store(<span class="g">"mykb.db"</span>)                      <span class="c"># or ":memory:"</span>
+store.assert_(<span class="g">"tom"</span>, <span class="g">"parent"</span>, <span class="g">"bob"</span>, source=<span class="g">"import"</span>)
+store.add_rule(Rule([(<span class="g">"?x"</span>, <span class="g">"parent"</span>, <span class="g">"?y"</span>)], (<span class="g">"?x"</span>, <span class="g">"ancestor"</span>, <span class="g">"?y"</span>), <span class="g">"anc"</span>))
+
+<span class="c"># the canonical answer path — same dict the CLI and HTTP service return</span>
+r = qa.run_action(store, {<span class="g">"action"</span>: <span class="g">"check"</span>, <span class="g">"triple"</span>: [<span class="g">"tom"</span>, <span class="g">"ancestor"</span>, <span class="g">"bob"</span>]})
+r[<span class="g">"answer"</span>]   <span class="c"># True</span>
+r[<span class="g">"trace"</span>]    <span class="c"># the proof tree, as text</span>
+
+<span class="c"># gate a candidate rule instead of trusting it</span>
+ok, report = admit_rule(store, candidate, <span class="g">"sibling"</span>,
+                        positives=[(<span class="g">"ann"</span>,<span class="g">"cy"</span>)], negatives=[(<span class="g">"ann"</span>,<span class="g">"ann"</span>)])
+
+<span class="c"># the materialized closure directly (read-only)</span>
+kg, prov = store.closure()</code></pre>
+
+  <table>
+    <tr><th>call</th><th>what it gives you</th></tr>
+    <tr><td><code>Store(path)</code></td><td>the persistent KB: <code>assert_/retract/triples</code>, <code>add_rule/rules/set_rule_active</code>, <code>add_case/cases</code>, <code>declare/schema</code>, <code>closure()</code>, <code>log/recent_log</code></td></tr>
+    <tr><td><code>qa.run_action</code></td><td>action in → <code>{kind, answer, trace}</code> out; decisions logged</td></tr>
+    <tr><td><code>admit_rule</code></td><td>± examples + pinned-case replay; commits only on pass</td></tr>
+    <tr><td><code>forward_chain(kg, rules)</code></td><td>the raw engine, if you bring your own <code>KnowledgeGraph</code></td></tr>
+    <tr><td><code>admit_tool</code> (toolsmith)</td><td>source + examples → AST gate → sandbox → registry</td></tr>
+  </table>
+</section>
+
+<!-- ================================================================ 8 -->
+<section class="ch" id="ch8">
+  <div class="ch-head"><span class="num">08</span><h2>Worked real-life examples</h2></div>
+  <p>Three complete, narrated programs ship in <code>examples/</code>. Each runs offline in
+  seconds — no model, no third-party packages — and CI runs them, so they can't rot.</p>
+
+  <h3><code>python examples/access_audit.py</code> — the access auditor</h3>
+  <p>A realistic engineering org (roles, inheritance, grants, a suspended contractor) answering
+  the audit questions: <em>who can deploy and why; capable vs allowed; what access exists only
+  through inheritance</em> (a what-if via <code>:disable</code>); strict schema catching a typo'd
+  relation; the decision log. This is the "point it at your IAM export" blueprint.</p>
+
+  <h3><code>python examples/eligibility_screening.py</code> — benefits screening</h3>
+  <p>Four applicants, three program rules using <code>&gt;=</code>/<code>&lt;</code> guards and
+  <code>~disqualified</code>. Every verdict carries the derivation an appeal would demand — and the
+  finale pins a denial as a regression case, then watches the gate <strong>reject</strong> a
+  sloppy rewrite that would have silently re-approved it.</p>
+
+  <h3><code>python examples/service_sidecar.py</code> — the HTTP sidecar</h3>
+  <p>Starts the service and queries it the way your app would: health, asserts, checks with
+  proofs in the response, an honest <code>false</code> for the engineer without a deploy key.
+  Copy the <code>client()</code> function into any codebase and you've integrated.</p>
+
+  <div class="marginal"><span class="tag">Suggested path</span>
+  Run all three, then swap the seeded facts for a CSV/JSON export of something you actually
+  manage — repo permissions, on-call rules, device inventory. The rules rarely number more
+  than a dozen.</div>
+</section>
+
+<!-- ================================================================ 9 -->
+<section class="ch" id="ch9">
+  <div class="ch-head"><span class="num">09</span><h2>Reference &amp; honest limits</h2></div>
+
+  <h3>Command cheatsheet</h3>
+  <table>
+    <tr><th>command</th><th>does</th></tr>
+    <tr><td><code>:load &lt;pack&gt;</code></td><td>seed a starter pack (family / rbac / diagnostics / eligibility / config)</td></tr>
+    <tr><td><code>:assert s r o</code> · <code>:retract s r o</code></td><td>add / remove a fact</td></tr>
+    <tr><td><code>:why s r o</code></td><td>check a fact and show its proof</td></tr>
+    <tr><td><code>:learn rel : desc :: +pairs | -pairs</code></td><td>LLM drafts a rule → gate tests → admit/reject</td></tr>
+    <tr><td><code>:tool name : desc :: f(a)=r, …</code></td><td>LLM writes a function → AST + sandbox + tests → registry</td></tr>
+    <tr><td><code>:call name args [as s r]</code></td><td>run a tool; optionally assert its result as a fact</td></tr>
+    <tr><td><code>:simplify (x + 0) * (2 + 3)</code></td><td>exact term rewriting → <code>x * 5</code></td></tr>
+    <tr><td><code>:case name</code> · <code>:cases</code></td><td>pin the last answer as a regression case · list pins</td></tr>
+    <tr><td><code>:disable name</code> · <code>:enable name</code></td><td>rule off/on, kept on record; closure updates instantly</td></tr>
+    <tr><td><code>:declare rel [doc]</code> · <code>:schema</code> · <code>:strict on|off</code></td><td>declared relations; strict rejects undeclared asserts</td></tr>
+    <tr><td><code>:facts [substr]</code> · <code>:rules</code> · <code>:tools</code> · <code>:rewrites</code> · <code>:log [n]</code> · <code>:kb</code></td><td>inspect everything</td></tr>
+    <tr><td><code>:narrate on|off</code></td><td>optional one-line LLM narration of exact answers</td></tr>
+  </table>
+
+  <h3>The action JSON (CLI translation target, HTTP body, library input)</h3>
+<pre><code>{"action": "query",  "pattern": ["?x", "can", "prod_deploy"]}   <span class="c"># ?x marks the unknown</span>
+{"action": "check",  "triple":  ["alice", "can", "prod_deploy"]}
+{"action": "assert", "triple":  ["dana", "has_role", "analyst"]}</code></pre>
+
+  <h3>Environment variables</h3>
+  <table>
+    <tr><th>variable</th><th>meaning</th></tr>
+    <tr><td><code>PROVENAS_LLM_MODEL</code></td><td>model name (default <code>qwen3.5:9b</code>)</td></tr>
+    <tr><td><code>PROVENAS_LLM_HOST</code></td><td>base URL (default local Ollama, <code>http://localhost:11434</code>)</td></tr>
+    <tr><td><code>PROVENAS_LLM_BACKEND</code></td><td><code>ollama</code> | <code>openai</code> (auto-<code>openai</code> if a key is set)</td></tr>
+    <tr><td><code>PROVENAS_LLM_API_KEY</code></td><td>bearer key for OpenAI-compatible endpoints</td></tr>
+    <tr><td><code>PROVENAS_API_TOKEN</code> · <code>PROVENAS_PORT</code> · <code>PROVENAS_BIND</code></td><td>service-mode auth token, port (8642), bind address</td></tr>
+  </table>
+
+  <h3>Honest limits</h3>
+  <ul>
+    <li><strong>It only knows what you've asserted.</strong> Out-of-KB questions get
+        "not derivable" — by design. It complements retrieval/RAG; it doesn't replace it.</li>
+    <li><strong>NL accuracy tracks the model.</strong> The gates make weak models safe, not smart.</li>
+    <li><strong>The sandbox is defense-in-depth</strong> (AST allowlist + rlimited subprocess),
+        not OS-level isolation. Untrusted multi-tenant code needs containers/seccomp.</li>
+    <li><strong>Single-writer, one box.</strong> The service serializes access; envelope is
+        10⁵–10⁶ facts, enforced by the perf tests. It is not Soufflé and not a cluster.</li>
+  </ul>
+
+  <p style="margin-top:2rem">That's the whole tool: <em>facts in, rules over them, proofs out —
+  and a model that may only ever propose.</em> Go point it at something you're tired of
+  answering by hand.</p>
+</section>
+
+<div class="ch-sep">❦</div>
+
+</main>
+</div>
+
+<footer>
+  PROVENAS · MIT © Calvin Schultz ·
+  <a href="https://github.com/calvincs/Provenas">github.com/calvincs/Provenas</a><br>
+  the LLM proposes — the fabric verifies — nothing admitted without a test
+</footer>
+
+<script>
+  // scrollspy for the ledger nav
+  const links = [...document.querySelectorAll('nav.toc a')];
+  const map = new Map(links.map(a => [a.getAttribute('href').slice(1), a]));
+  const obs = new IntersectionObserver(es => {
+    es.forEach(e => {
+      if (e.isIntersecting) {
+        links.forEach(a => a.classList.remove('on'));
+        (map.get(e.target.id) || {}).classList?.add('on');
+      }
+    });
+  }, {rootMargin: '-15% 0px -75% 0px'});
+  document.querySelectorAll('section.ch').forEach(s => obs.observe(s));
+</script>
+</body>
+</html>

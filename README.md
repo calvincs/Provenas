@@ -91,6 +91,20 @@ provenas> :call gcd 48 36
 
 Type `:help` for the full command list.
 
+**New here? Two fast ways in:**
+
+- **The zero-to-hero tutorial** — open [`docs/tutorial.html`](docs/tutorial.html) in a browser
+  (clone the repo and double-click it): ten short chapters from first fact to service mode, with
+  real transcripts, a command cheatsheet, and the full action/rule reference.
+- **Three real-life examples** in [`examples/`](examples/) — each runs offline in seconds, no model,
+  no third-party packages (CI runs them too, so they can't rot):
+
+```bash
+python examples/access_audit.py          # "who can touch prod, and WHY" — proofs, what-if, strict schema
+python examples/eligibility_screening.py # benefits rules with >=/~unless; a pinned case blocks a bad rule
+python examples/service_sidecar.py       # the HTTP decision sidecar, queried like your app would
+```
+
 ## Connecting a model
 
 The natural-language layer talks to any chat model over one of two protocols — configure it with environment
@@ -246,6 +260,8 @@ provenas/
   rewrite.py              learned term-rewriting engine + value-preserving rule gate
   toolsmith.py            tool synthesis safety gate (AST allowlist + sandboxed subprocess)
   engine.py typed.py …    the cross-domain reduction engine from the research phases
+docs/tutorial.html        the zero-to-hero tutorial (self-contained; open in a browser)
+examples/                 real-life walkthroughs: access audit, eligibility screening, HTTP sidecar
 experiments/              one script per result (the table above)
 tests/sanity.py           fast checks for every component (no training, no LLM)
 ```
