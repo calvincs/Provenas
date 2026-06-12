@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Provenas — Zero to Hero</title>
-<meta name="description" content="A zero-to-hero tutorial for Provenas: the small neuro-symbolic engine. Facts, rules, proofs, guardrails, the LLM layer, service mode, and the Python API.">
+<meta name="description" content="A plain-English, zero-to-hero tutorial for Provenas: teach it facts and rules, ask questions, and get answers that always show their work.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,900&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet">
@@ -83,7 +83,7 @@
   a{color:var(--ox); text-decoration-thickness:1px; text-underline-offset:3px}
   strong{font-weight:600}
   .lead{font-size:1.13rem; font-style:italic; color:var(--ink-soft)}
-  ul{padding-left:1.3rem} li{margin:.4rem 0}
+  ul,ol{padding-left:1.3rem} li{margin:.4rem 0}
   .marginal{
     border-left:3px solid var(--moss); background:rgba(61,90,58,.07);
     padding:.8rem 1.1rem; margin:1.3rem 0; font-size:.95rem; border-radius:0 3px 3px 0;
@@ -143,64 +143,85 @@
 <header class="mast">
   <div class="ledger-no">Field Manual · No. 001</div>
   <h1>Prove<span class="ox">nas</span></h1>
-  <p class="sub">Zero to hero with the small neuro-symbolic engine: ask in plain English,
-  get answers that are exact, proven, and never hallucinated.</p>
-  <div class="stamp">every answer <b>carries its proof</b> · nothing admitted <b>without a test</b></div>
+  <p class="sub">Teach it facts and rules. Ask it questions — in plain English if you like.
+  Every answer shows its work, and it never makes things up.</p>
+  <div class="stamp">every answer <b>shows its work</b> · nothing gets in <b>without a test</b></div>
 </header>
 
 <div class="wrap">
 <nav class="toc" id="toc">
   <div class="toc-title">Ledger</div>
-  <a href="#ch0"><span class="n">00</span>The idea in 60 seconds</a>
-  <a href="#ch1"><span class="n">01</span>Install &amp; first facts</a>
-  <a href="#ch2"><span class="n">02</span>Rules &amp; proofs</a>
-  <a href="#ch3"><span class="n">03</span>Negation &amp; comparisons</a>
-  <a href="#ch4"><span class="n">04</span>Guardrails</a>
-  <a href="#ch5"><span class="n">05</span>The English layer</a>
-  <a href="#ch6"><span class="n">06</span>The decision sidecar</a>
-  <a href="#ch7"><span class="n">07</span>The Python API</a>
-  <a href="#ch8"><span class="n">08</span>Worked real-life examples</a>
-  <a href="#ch9"><span class="n">09</span>Reference &amp; honest limits</a>
+  <a href="#ch0"><span class="n">00</span>What is this thing?</a>
+  <a href="#ch1"><span class="n">01</span>Install it, teach it facts</a>
+  <a href="#ch2"><span class="n">02</span>Rules: if-this-then-that</a>
+  <a href="#ch3"><span class="n">03</span>"Unless" and numbers</a>
+  <a href="#ch4"><span class="n">04</span>Safety rails</a>
+  <a href="#ch5"><span class="n">05</span>Talk to it in English</a>
+  <a href="#ch6"><span class="n">06</span>Let your apps ask it</a>
+  <a href="#ch7"><span class="n">07</span>For Python programmers</a>
+  <a href="#ch8"><span class="n">08</span>Real-life examples</a>
+  <a href="#ch9"><span class="n">09</span>Cheatsheet &amp; fine print</a>
 </nav>
 
 <main>
 
 <!-- ================================================================ 0 -->
 <section class="ch" id="ch0">
-  <div class="ch-head"><span class="num">00</span><h2>The idea in 60 seconds</h2></div>
-  <p class="lead">LLMs are wonderful at language and terrible at being trusted.
-  Provenas splits the job in two.</p>
-  <p>An <strong>LLM proposes</strong> — it translates your question into a tiny structured action,
-  drafts rules, drafts code. An <strong>exact symbolic fabric verifies and answers</strong> —
-  a knowledge base of facts and logic rules, evaluated by a real Datalog engine, with SQLite
-  underneath remembering everything. The model is the mouth and hands; the fabric is the
-  source of truth.</p>
-  <p>Two consequences fall out of that split:</p>
+  <div class="ch-head"><span class="num">00</span><h2>What is this thing?</h2></div>
+  <p class="lead">You've seen AI chatbots confidently make things up. Provenas is built so
+  that <em>cannot happen</em>.</p>
+
+  <p>Here's the trick. There are two parts, and they have very different jobs:</p>
   <ul>
-    <li><strong>Every answer carries its derivation.</strong> Not "yes", but
-        "yes, <em>because</em> these facts and these rules" — a proof tree down to the given facts.</li>
-    <li><strong>Nothing is admitted without a test.</strong> A learned rule must derive every
-        positive example and no negative one, must not flip any decision you've pinned, and a
-        synthesized tool must survive static analysis <em>and</em> a sandboxed run.
-        A wrong proposal is rejected; it never touches the store.</li>
+    <li><strong>The talker</strong> (an AI language model) only gets to <em>suggest</em> things —
+        "I think you're asking whether Alice can deploy to production."</li>
+    <li><strong>The fact-keeper</strong> (a small, exact database of facts and rules) does the
+        actual answering. It's like a calculator: it can't improvise, it can only compute.
+        It is the only source of truth.</li>
   </ul>
-  <p>When the model mis-reads you, the fabric says <em>"not derivable"</em> — an honest no,
-  never a confident invention. That property is the whole point.</p>
+
+  <p>Think of it like a courtroom. The AI is a lawyer — persuasive, sometimes wrong. The
+  fact-keeper is the court record. No matter how eloquent the lawyer is, nothing counts unless
+  it's in the record, and every verdict cites the record line by line.</p>
+
+  <p>That design gives you two guarantees:</p>
+  <ul>
+    <li><strong>Every answer shows its work.</strong> Not just "yes" — but "yes, <em>because of
+        these exact facts and these exact rules</em>," traced step by step like a math proof.</li>
+    <li><strong>Nothing gets in without passing a test.</strong> If the AI suggests a new rule or
+        writes a bit of code, Provenas tests the suggestion first. Fail the test → rejected,
+        never saved. The AI can be wrong all day long and the record stays clean.</li>
+  </ul>
+
+  <p>And if you ask something it simply doesn't know? It says <em>"not derivable"</em> — an honest
+  "I can't conclude that" — instead of guessing. That one behavior is the whole point.</p>
+
+  <div class="marginal"><span class="tag">What would I use it for?</span>
+  Anything where "the AI probably got it right" isn't good enough: who has access to what
+  (and why), who qualifies for a benefit or discount (and why), which parts are compatible,
+  troubleshooting steps — any set of rules you currently keep in a PDF and three people's heads.</div>
 </section>
 
 <!-- ================================================================ 1 -->
 <section class="ch" id="ch1">
-  <div class="ch-head"><span class="num">01</span><h2>Install &amp; your first facts</h2></div>
-  <p>The engine and CLI are pure Python standard library — no heavy dependencies.</p>
-<pre><span class="cap">shell</span><code><span class="c"># Python 3.10+</span>
-git clone https://github.com/calvincs/Provenas && cd Provenas
+  <div class="ch-head"><span class="num">01</span><h2>Install it, teach it facts</h2></div>
+  <p>You need Python 3.10 or newer. There's nothing else to install — no accounts, no cloud.</p>
+<pre><span class="cap">in your terminal</span><code>git clone https://github.com/calvincs/Provenas && cd Provenas
 pip install -e .
-provenas mykb.db        <span class="c"># opens (or creates) a persistent SQLite knowledge base</span></code></pre>
+provenas mykb.db        <span class="c"># opens (or creates) your knowledge base — a single file</span></code></pre>
 
-  <p>Everything in the knowledge base is a <strong>fact</strong>: a triple of
-  <code>(subject, relation, object)</code>. Add some, query them, and ask <em>why</em>:</p>
+  <p>Everything Provenas knows is a <strong>fact</strong>, and a fact is just a three-word
+  sentence: <em>who — relationship — what</em>. Like flash cards:</p>
+  <ul>
+    <li><code>tom parent bob</code> &nbsp;means&nbsp; "Tom is a parent of Bob."</li>
+    <li><code>alice has_role engineer</code> &nbsp;means&nbsp; "Alice has the role <em>engineer</em>."</li>
+    <li><code>rosa age 71</code> &nbsp;means&nbsp; "Rosa's age is 71."</li>
+  </ul>
 
-<pre><span class="cap">provenas — the CLI</span><code><span class="p">provenas&gt;</span> <span class="u">:assert tom parent bob</span>
+  <p>Commands all start with a colon (<code>:</code>). Let's teach it two facts and ask about one.
+  <code>:why</code> means "is this true — and show me why":</p>
+
+<pre><span class="cap">provenas — try this</span><code><span class="p">provenas&gt;</span> <span class="u">:assert tom parent bob</span>
   added (tom parent bob)
 <span class="p">provenas&gt;</span> <span class="u">:assert bob parent ann</span>
   added (bob parent ann)
@@ -212,23 +233,34 @@ provenas mykb.db        <span class="c"># opens (or creates) a persistent SQLite
   <span class="g">yes</span>
     <span class="d">(tom parent bob)   (given fact)</span></code></pre>
 
-  <div class="marginal"><span class="tag">No model needed yet</span>
-  Every <code>:command</code> works completely offline. The English layer (chapter 05) is an
-  optional add-on, never a requirement — and never the authority.</div>
+  <p>"Given fact" means: <em>true because you told me so.</em> In the next chapter, Provenas
+  starts figuring out things you <em>didn't</em> tell it.</p>
 
-  <p>Don't want to type facts by hand? Five starter packs ship in the box:
-  <code>:load family</code>, <code>rbac</code>, <code>diagnostics</code>,
-  <code>eligibility</code>, or <code>config</code>.</p>
+  <div class="marginal"><span class="tag">No AI needed yet</span>
+  Notice we haven't connected any AI model. Every <code>:command</code> works completely offline.
+  The English-language layer (chapter 05) is an optional add-on — never a requirement, and never
+  the authority.</div>
+
+  <p>Don't feel like typing facts? Load a ready-made set:
+  <code>:load family</code> (a family tree), <code>:load rbac</code> (office access permissions),
+  <code>:load diagnostics</code> (computer troubleshooting), <code>:load eligibility</code>
+  (benefit rules), or <code>:load config</code> (compatible parts).</p>
 </section>
 
 <!-- ================================================================ 2 -->
 <section class="ch" id="ch2">
-  <div class="ch-head"><span class="num">02</span><h2>Rules, derived facts, and proofs</h2></div>
-  <p>Facts you state; <strong>rules</strong> derive what they imply. A rule is a Horn clause —
-  "if all the body atoms hold, the head holds" — written with <code>?variables</code>.
-  Load the access-control pack and look at one:</p>
+  <div class="ch-head"><span class="num">02</span><h2>Rules: if-this-then-that</h2></div>
+  <p>Facts are what you <em>state</em>. <strong>Rules</strong> are how Provenas <em>figures
+  out more</em>. A rule is an if-then sentence:</p>
 
-<pre><span class="cap">provenas</span><code><span class="p">provenas&gt;</span> <span class="u">:load rbac</span>
+  <p style="text-align:center"><em>"IF someone has a role, AND that role grants a permission —
+  THEN that person has the permission."</em></p>
+
+  <p>In rules, words starting with <code>?</code> are blanks to fill in — like the X in algebra.
+  <code>?u</code> can stand for any person, <code>?p</code> for any permission. Load the office
+  access pack and look at its three rules:</p>
+
+<pre><span class="cap">provenas — try this</span><code><span class="p">provenas&gt;</span> <span class="u">:load rbac</span>
   loaded 'rbac'
 <span class="p">provenas&gt;</span> <span class="u">:rules</span>
   role-inherit: ?u has_role ?r2  ⇐  (?u has_role ?r), (?r inherits ?r2)
@@ -236,11 +268,17 @@ provenas mykb.db        <span class="c"># opens (or creates) a persistent SQLite
   can-do: ?u can ?a  ⇐  (?u has_perm ?p), (?a requires ?p)
   [3 active / 3 rule(s)]  (:disable/:enable &lt;name&gt;)</code></pre>
 
-  <p>The engine forward-chains those rules to a fixpoint — and <em>materializes</em> the result,
-  so queries are answered from a cache that only recomputes when facts or rules change.
-  Ask something the rules imply, and the proof tree comes back with it:</p>
+  <p>Read the <code>⇐</code> arrow as "whenever the right side holds." The middle rule says:
+  <em>whenever ?u has role ?r, and role ?r grants permission ?p — then ?u has permission ?p.</em></p>
 
-<pre><span class="cap">provenas</span><code><span class="p">provenas&gt;</span> <span class="u">:why alice can prod_deploy</span>
+  <p>Provenas applies every rule to every fact, over and over, until there's nothing new left to
+  conclude — then it <em>saves</em> all those conclusions, so asking questions later is instant.
+  (Like solving a sudoku once and keeping the finished grid, instead of re-solving it every time
+  someone asks what's in row 3.)</p>
+
+  <p>Now the payoff. Ask about something you never directly stated, and watch it show its work:</p>
+
+<pre><span class="cap">provenas — try this</span><code><span class="p">provenas&gt;</span> <span class="u">:why alice can prod_deploy</span>
   <span class="g">yes</span>
     <span class="g">(alice can prod_deploy)   ⇐ rule[can-do]</span>
       <span class="g">(alice has_perm deploy_perm)   ⇐ rule[perm-from-role]</span>
@@ -248,130 +286,159 @@ provenas mykb.db        <span class="c"># opens (or creates) a persistent SQLite
         <span class="d">(engineer grants deploy_perm)   (given fact)</span>
       <span class="d">(prod_deploy requires deploy_perm)   (given fact)</span></code></pre>
 
-  <p>Read it bottom-up: two given facts make <code>alice has_perm deploy_perm</code>;
-  that plus a third fact makes <code>alice can prod_deploy</code>. This is what
-  "explainable" means here — not a narrative, a <em>derivation</em>.</p>
+  <p>Read it from the bottom up, like a receipt:</p>
+  <ol>
+    <li>Alice is an engineer <em>(you said so)</em>, and engineers get the deploy permission
+        <em>(you said so)</em> → so Alice has the deploy permission <em>(rule)</em>.</li>
+    <li>Deploying to production requires that permission <em>(you said so)</em> → so Alice can
+        deploy <em>(rule)</em>.</li>
+  </ol>
+  <p>That receipt is the difference between "trust me" and "check me." Auditors, regulators, and
+  anyone who's ever been burned by a confident wrong answer will know which one they want.</p>
 
-  <div class="marginal"><span class="tag">Scale, measured</span>
-  The evaluator is indexed, semi-naive, stratified Datalog: 50,000 base facts close to a
-  287,000-fact knowledge base in ~1.3&nbsp;s; 200,000 → 1.15&nbsp;M in ~6&nbsp;s; reads from the
-  materialized closure are sub-millisecond. <code>tests/test_perf.py</code> enforces the envelope.</div>
+  <div class="marginal"><span class="tag">It's fast</span>
+  This isn't a toy speed-wise: 50,000 starting facts grow to a 287,000-fact knowledge base in about
+  1.3 seconds, and questions against the saved result come back in under a millisecond. There's a
+  test in the repo that fails if it ever gets slower.</div>
 </section>
 
 <!-- ================================================================ 3 -->
 <section class="ch" id="ch3">
-  <div class="ch-head"><span class="num">03</span><h2>Real policy: negation &amp; comparisons</h2></div>
-  <p>Real rules are rarely just lookups. They say <em>"unless"</em> and they compare numbers.
-  Rule bodies support three kinds of atom:</p>
+  <div class="ch-head"><span class="num">03</span><h2>"Unless" and numbers</h2></div>
+  <p>Real-world rules are rarely just "if A and B." They say <strong>"unless"</strong>, and they
+  <strong>compare numbers</strong>. Both work here. A rule's IF-part can use three kinds of
+  condition:</p>
 
   <table>
-    <tr><th>atom</th><th>meaning</th></tr>
+    <tr><th>condition</th><th>plain English</th></tr>
     <tr><td><code>["?u", "has_role", "?r"]</code></td>
-        <td><strong>Lookup</strong> — joins against the stored + derived facts.</td></tr>
+        <td><strong>A lookup.</strong> "?u has some role ?r" — matched against the known facts.</td></tr>
     <tr><td><code>["?u", "~suspended", "?x"]</code></td>
-        <td><strong>Negation</strong> (<code>~rel</code>) — holds iff <em>no</em> matching fact exists
-            (NOT&nbsp;EXISTS). Evaluation is stratified: anything that can be <code>suspended</code> is fully
-            derived before anything that depends on <em>not</em> being suspended. A negation cycle is
-            rejected outright.</td></tr>
+        <td><strong>An "unless."</strong> The <code>~</code> means <em>no such fact exists</em> —
+            "?u is <em>not</em> suspended, in any way, by anyone." If even one matching fact exists,
+            the rule doesn't apply.</td></tr>
     <tr><td><code>["?age", "&gt;=", "65"]</code></td>
-        <td><strong>Guard</strong> — <code>!=</code> <code>==</code> <code>&lt;</code> <code>&lt;=</code>
-            <code>&gt;</code> <code>&gt;=</code>, compared numerically when both sides are numbers
-            (ISO dates also order correctly as strings).</td></tr>
+        <td><strong>A number check.</strong> Also <code>&lt;</code> <code>&lt;=</code> <code>&gt;</code>
+            <code>==</code> <code>!=</code>. When both sides are numbers they compare as numbers
+            (so 9 &lt; 18, even though alphabetically "9" comes after "18").</td></tr>
   </table>
 
-  <p>Which makes "allowed unless suspended" and "qualifies at 65+" one-liners:</p>
+  <p>Two real rules, exactly as a policy document would phrase them:</p>
 
-<pre><span class="cap">python — rules as data</span><code><span class="k">Rule</span>([(<span class="g">"?u"</span>, <span class="g">"can"</span>, <span class="g">"?a"</span>), (<span class="g">"?u"</span>, <span class="g">"~suspended"</span>, <span class="g">"?when"</span>)],
-     (<span class="g">"?u"</span>, <span class="g">"allowed"</span>, <span class="g">"?a"</span>), <span class="g">"allowed"</span>)          <span class="c"># capable AND not suspended</span>
+<pre><span class="cap">two rules, written out</span><code><span class="c"># "You're ALLOWED to do something if you CAN do it — unless you're suspended."</span>
+allowed:  ?u allowed ?a  ⇐  (?u can ?a), (?u ~suspended ?when)
 
-<span class="k">Rule</span>([(<span class="g">"?p"</span>, <span class="g">"age"</span>, <span class="g">"?a"</span>), (<span class="g">"?a"</span>, <span class="g">"&gt;="</span>, <span class="g">"65"</span>)],
-     (<span class="g">"?p"</span>, <span class="g">"eligible_for"</span>, <span class="g">"senior_discount"</span>), <span class="g">"senior-65plus"</span>)</code></pre>
+<span class="c"># "Age 65 or older? You're eligible for the senior discount."</span>
+senior:   ?p eligible_for senior_discount  ⇐  (?p age ?a), (?a &gt;= 65)</code></pre>
 
-  <p>And the proof still tells the whole story — the contractor below is <em>capable</em> of pushing
-  to main, but not <em>allowed</em>, and the system can show you both:</p>
+  <p>Here's the "unless" doing its job in a real run. Dev Dan is a contractor whose access was
+  suspended on June 2nd. He still <em>has</em> the permission on paper — but he's not
+  <em>allowed</em>:</p>
 
-<pre><span class="cap">examples/access_audit.py (real output)</span><code>[audit] Is the contractor CAPABLE of pushing to main?  (raw permission)
+<pre><span class="cap">examples/access_audit.py — real output</span><code>[audit] Is the contractor CAPABLE of pushing to main?  (raw permission)
         -&gt; <span class="g">yes</span>
-[audit] ...but is he ALLOWED?  (suspension wins — negation, not a special case)
+[audit] ...but is he ALLOWED?  (suspension wins — no special case needed)
         -&gt; <span class="r">no</span>
         <span class="d">(dev_dan allowed main_branch) is not derivable from the facts + rules.</span></code></pre>
+
+  <p>Notice nobody wrote special "suspension-handling code." It's just a rule with an "unless,"
+  and the engine treats it like any other rule.</p>
+
+  <div class="marginal"><span class="tag">One guardrail you get for free</span>
+  Circular "unless" logic — like <em>"A counts unless B, and B counts unless A"</em> — has no
+  sensible answer, so Provenas refuses rules that create that kind of loop rather than guessing.</div>
 </section>
 
 <!-- ================================================================ 4 -->
 <section class="ch" id="ch4">
-  <div class="ch-head"><span class="num">04</span><h2>Guardrails: cases, schema, history, log</h2></div>
-  <p>This is the chapter that makes it production-shaped rather than a demo.</p>
+  <div class="ch-head"><span class="num">04</span><h2>Safety rails</h2></div>
+  <p>This chapter is what separates "neat demo" from "thing you can actually rely on."
+  Four rails:</p>
 
-  <h3>Pin decisions — CI for rules</h3>
-  <p>After any answer, pin it. From then on, <em>every</em> rule change is replayed against your
-  pinned cases, and a rule that flips one is rejected — even if its own examples pass:</p>
-<pre><span class="cap">provenas</span><code><span class="p">provenas&gt;</span> <span class="u">:why alice can prod_deploy</span>
-  <span class="g">yes</span> <span class="d">…proof…</span>
+  <h3>1. Pin an answer, and no rule change can quietly flip it</h3>
+  <p>Suppose today the system correctly says Alice can deploy. Pin that answer with
+  <code>:case</code> — like photographing the scoreboard:</p>
+<pre><span class="cap">provenas — try this</span><code><span class="p">provenas&gt;</span> <span class="u">:why alice can prod_deploy</span>
+  <span class="g">yes</span> <span class="d">…the receipt…</span>
 <span class="p">provenas&gt;</span> <span class="u">:case alice-prod</span>
   pinned case 'alice-prod': {'action': 'check', 'triple': ['alice', 'can', 'prod_deploy']} -&gt; True
   (rule changes must preserve it)</code></pre>
+  <p>From now on, <em>every</em> proposed rule change gets re-checked against your pinned answers
+  first. A new rule that would flip one — even accidentally — is rejected on the spot. Software
+  engineers call this idea "regression testing"; here it guards your <em>decisions</em>.</p>
 
-  <h3>Strict schema — a typo can't corrupt the data</h3>
-<pre><span class="cap">provenas</span><code><span class="p">provenas&gt;</span> <span class="u">:strict on</span>
+  <h3>2. A spell-checker for facts</h3>
+  <p>Typos are how databases rot. Turn on strict mode and Provenas only accepts facts whose
+  relationship word has been officially declared:</p>
+<pre><span class="cap">provenas — try this</span><code><span class="p">provenas&gt;</span> <span class="u">:strict on</span>
   strict mode ON — asserts with undeclared relations are rejected
 <span class="p">provenas&gt;</span> <span class="u">:assert bob hsa_role intern</span>
   <span class="r">error: relation 'hsa_role' is not declared in the schema (strict mode)</span></code></pre>
-  <p>Starter packs declare their relations automatically; declare your own with
+  <p>(<code>hsa_role</code> was a typo for <code>has_role</code> — caught instead of silently
+  stored.) The ready-made packs declare their words automatically; declare your own with
   <code>:declare has_role "person holds role"</code>.</p>
 
-  <h3>Rules have history, not just state</h3>
-<pre><span class="cap">provenas</span><code><span class="p">provenas&gt;</span> <span class="u">:disable can-do</span>
+  <h3>3. Rules can be switched off without being deleted</h3>
+<pre><span class="cap">provenas — try this</span><code><span class="p">provenas&gt;</span> <span class="u">:disable can-do</span>
   rule 'can-do' disabled (kept on record)
 <span class="p">provenas&gt;</span> <span class="u">:why alice can prod_deploy</span>
   <span class="r">no</span>
 <span class="p">provenas&gt;</span> <span class="u">:enable can-do</span>
   rule 'can-do' re-enabled</code></pre>
-  <p>The materialized closure updates the moment a rule's status changes — that's also your
-  <strong>what-if analysis</strong>: disable a rule, see exactly which access or eligibility evaporates,
-  re-enable it.</p>
+  <p>This doubles as <strong>what-if analysis</strong>: "how much access exists <em>only</em>
+  because of role inheritance?" Switch that rule off, ask again, compare, switch it back on.
+  Answers update instantly.</p>
 
-  <h3>The decision log</h3>
-  <p>The audit log (<code>:log</code>) records every change <em>and every decision</em> — each
-  query/check with its answer — so "what did the system say last Tuesday and why" has an answer.</p>
+  <h3>4. Everything is on the record</h3>
+  <p><code>:log</code> shows the journal: every fact added or removed, every rule admitted or
+  rejected, <em>and every question answered</em> — with the answer it gave. "What did the system
+  say last Tuesday, and why?" has an actual answer.</p>
 </section>
 
 <!-- ================================================================ 5 -->
 <section class="ch" id="ch5">
-  <div class="ch-head"><span class="num">05</span><h2>The English layer</h2></div>
-  <p>Connect any chat model and the same knowledge base becomes conversational. The model only ever
-  emits a small JSON action (<code>query</code> / <code>check</code> / <code>assert</code>);
-  the fabric executes it exactly.</p>
+  <div class="ch-head"><span class="num">05</span><h2>Talk to it in English</h2></div>
+  <p>Everything so far worked with typed commands. Connect an AI model and you can just…
+  ask. The model's only job is translating your sentence into one of the exact commands you've
+  already seen — the fact-keeper still does all the answering.</p>
 
-<pre><span class="cap">shell — three ways to connect a model</span><code><span class="c"># 1. Local Ollama (the default — nothing to set)</span>
+<pre><span class="cap">in your terminal — three ways to connect a model</span><code><span class="c"># Option 1: a free local model via Ollama (nothing leaves your machine)</span>
 ollama pull qwen3.5:9b
 
-<span class="c"># 2. Remote Ollama server</span>
+<span class="c"># Option 2: an Ollama server on another machine</span>
 export PROVENAS_LLM_HOST=http://my-server:11434
-export PROVENAS_LLM_MODEL=qwen3.5:9b
 
-<span class="c"># 3. Any OpenAI-compatible API (OpenAI, OpenRouter, vLLM, LM Studio, llama.cpp, …)</span>
+<span class="c"># Option 3: any OpenAI-style service (OpenAI, OpenRouter, LM Studio, …)</span>
 export PROVENAS_LLM_BACKEND=openai
 export PROVENAS_LLM_HOST=https://api.openai.com
 export PROVENAS_LLM_API_KEY=sk-...
 export PROVENAS_LLM_MODEL=gpt-4o-mini</code></pre>
 
-<pre><span class="cap">provenas</span><code><span class="p">provenas&gt;</span> <span class="u">Can Alice deploy to production?</span>
+<pre><span class="cap">provenas — try this</span><code><span class="p">provenas&gt;</span> <span class="u">Can Alice deploy to production?</span>
   → <span class="g">yes</span>
     <span class="d">[{'action': 'check', 'triple': ['alice', 'can', 'prod_deploy']}]</span>
     <span class="g">(alice can prod_deploy)   ⇐ rule[can-do]</span>
-      <span class="d">…the full proof, as in chapter 02…</span></code></pre>
+      <span class="d">…the same receipt as chapter 02…</span></code></pre>
 
-  <h3>Teach it a rule — through the gate</h3>
-  <p><code>:learn</code> asks the model to draft a rule from your description and ± example pairs.
-  The gate tests it; if it fails, the verdict is fed back and the model revises; if it still fails,
-  it's rejected. Only a verified rule is ever committed.</p>
-<pre><span class="cap">provenas</span><code><span class="p">provenas&gt;</span> <span class="u">:load family</span>
+  <p>The dim line in brackets shows you the translation the model proposed — full transparency.
+  If the model misunderstands your question, the worst case is an honest "not derivable,"
+  never an invented yes.</p>
+
+  <h3>Teach it a rule by example</h3>
+  <p>Describe the rule in English and give a few examples of right (and wrong) answers.
+  The model drafts the rule; Provenas <em>tests the draft</em>: it must produce all your
+  "should be true" examples and none of your "should be false" ones — and not flip any pinned
+  answer from chapter 04. Pass → saved. Fail → the model gets the failure report, tries again,
+  and if it still fails, nothing is saved.</p>
+<pre><span class="cap">provenas — try this</span><code><span class="p">provenas&gt;</span> <span class="u">:load family</span>
 <span class="p">provenas&gt;</span> <span class="u">:learn sibling : share a parent, different people :: ann,cy cy,ann | ann,ann ann,dan</span>
   proposed: sibling ⇐ (?p parent ?x), (?p parent ?y), (?x != ?y)
   -&gt; <span class="g">ADMITTED (saved)</span>  (missing=[] violated=[])</code></pre>
+  <p>(Before the <code>|</code>: pairs that <em>should</em> count as siblings. After it: pairs that
+  should <em>not</em> — Ann isn't her own sibling.)</p>
 
-  <h3>Grow a tool — safe and correct, or not at all</h3>
-<pre><span class="cap">provenas</span><code><span class="p">provenas&gt;</span> <span class="u">:tool gcd : greatest common divisor of a and b :: gcd(12,8)=4, gcd(7,5)=1</span>
+  <h3>Let it write a small tool — inside a cage</h3>
+<pre><span class="cap">provenas — try this</span><code><span class="p">provenas&gt;</span> <span class="u">:tool gcd : greatest common divisor of a and b :: gcd(12,8)=4, gcd(7,5)=1</span>
   proposed:
       def gcd(a, b):
           if b == 0:
@@ -380,161 +447,174 @@ export PROVENAS_LLM_MODEL=gpt-4o-mini</code></pre>
   -&gt; <span class="g">ADMITTED (saved): all 2 examples passed</span>
 <span class="p">provenas&gt;</span> <span class="u">:call gcd 48 36</span>
   gcd(48, 36) = 12</code></pre>
-  <p>LLM-written code is admitted only after an AST allowlist (no imports, no attribute access,
-  no dangerous builtins) <em>and</em> a resource-limited sandboxed run against your examples.
-  An <code>import os</code> dies statically; an infinite loop is killed by the sandbox; a wrong
-  implementation fails the tests.</p>
+  <p>AI-written code is the scariest kind, so it faces the strictest gate: the code is inspected
+  for anything dangerous (no file access, no network, no sneaky tricks — rejected before it ever
+  runs), then executed in a locked, time-and-memory-limited cage against your examples. Code that
+  loops forever gets killed; code that's wrong fails the examples; only code that's both safe
+  <em>and</em> correct is kept.</p>
 
   <div class="marginal caution"><span class="tag">Honest note</span>
-  Translation quality tracks the model. A small model occasionally inverts a relation's direction —
-  the fabric then answers "not derivable" rather than something false, and a stronger model
-  (<code>PROVENAS_LLM_MODEL=qwen3.5:27b-q4_K_M</code>) fixes it. The gates are what make a weak
-  model <em>safe</em>, not smart.</div>
+  Smaller AI models occasionally garble a translation (for example, flipping "Cy's ancestors" into
+  "Cy's descendants"). When that happens the answer comes back empty or "not derivable" — wrong-shaped,
+  but never false — and a larger model fixes it. The testing gates are what make a weak model
+  <em>safe</em>; they can't make it smart.</div>
 </section>
 
 <!-- ================================================================ 6 -->
 <section class="ch" id="ch6">
-  <div class="ch-head"><span class="num">06</span><h2>The decision sidecar</h2></div>
-  <p>Run the same knowledge base as a local HTTP service — the way OPA runs beside an app,
-  except every answer carries its proof. <code>POST /action</code> needs no model at all.</p>
+  <div class="ch-head"><span class="num">06</span><h2>Let your apps ask it</h2></div>
+  <p>The same knowledge base can run as a tiny web service on your machine, so your <em>other
+  programs</em> (in any language) can ask it questions over HTTP — like a smart light switch
+  for decisions. No AI model required for this mode at all.</p>
 
-<pre><span class="cap">shell</span><code>export PROVENAS_API_TOKEN=sekrit        <span class="c"># optional bearer auth</span>
+<pre><span class="cap">in your terminal</span><code>export PROVENAS_API_TOKEN=sekrit        <span class="c"># optional password</span>
 provenas-serve mykb.db 8642</code></pre>
 
-<pre><span class="cap">your service (any language)</span><code>curl -s -H "Authorization: Bearer sekrit" localhost:8642/action \
+<pre><span class="cap">any program, anywhere — here using curl</span><code>curl -s -H "Authorization: Bearer sekrit" localhost:8642/action \
      -d '{"action":"check","triple":["alice","can","prod_deploy"]}'
 
 <span class="g">{"kind": "check", "answer": true,
  "trace": "(alice can prod_deploy)   ⇐ rule[can-do]\n  (alice has_perm deploy_perm) …"}</span></code></pre>
 
+  <p>The receipt (<code>trace</code>) rides along in every response — your app can show it to a
+  user, attach it to a ticket, or store it for an audit.</p>
+
   <table>
-    <tr><th>endpoint</th><th>does</th></tr>
-    <tr><td><code>GET /health</code></td><td>liveness + fact/rule counts + model reachability</td></tr>
-    <tr><td><code>POST /action</code></td><td>exact <code>query</code>/<code>check</code>/<code>assert</code> — no model needed</td></tr>
-    <tr><td><code>POST /ask</code></td><td><code>{"q": "plain English"}</code> → translate → exact answer (needs a model)</td></tr>
-    <tr><td><code>GET /facts?contains=x</code></td><td>browse stored facts</td></tr>
-    <tr><td><code>GET /rules</code> · <code>GET /schema</code></td><td>active rules · declared relations + strict flag</td></tr>
+    <tr><th>address</th><th>what it does</th></tr>
+    <tr><td><code>GET /health</code></td><td>"are you alive?" + fact/rule counts</td></tr>
+    <tr><td><code>POST /action</code></td><td>ask or add, exactly — no AI involved</td></tr>
+    <tr><td><code>POST /ask</code></td><td><code>{"q": "plain English"}</code> → translated, then answered exactly (needs a model)</td></tr>
+    <tr><td><code>GET /facts?contains=x</code></td><td>browse the stored facts</td></tr>
+    <tr><td><code>GET /rules</code> · <code>GET /schema</code></td><td>the active rules · the declared vocabulary</td></tr>
   </table>
 
-  <p>Single-writer by design: one process owns the SQLite file; the server serializes access
-  (WAL + lock). It's a sidecar, not a distributed database.</p>
+  <p>One process owns the file at a time — it's a personal sidecar, not a big shared database
+  cluster, and it doesn't pretend to be one.</p>
 </section>
 
 <!-- ================================================================ 7 -->
 <section class="ch" id="ch7">
-  <div class="ch-head"><span class="num">07</span><h2>The Python API</h2></div>
-  <p>Everything the CLI does is a thin layer over a small library. The five objects that matter:</p>
+  <div class="ch-head"><span class="num">07</span><h2>For Python programmers</h2></div>
+  <p>If you write Python, the CLI and the web service are thin wrappers around a small library
+  you can use directly. The whole surface fits in one screen:</p>
 
 <pre><span class="cap">python</span><code><span class="k">from</span> provenas.store <span class="k">import</span> Store
 <span class="k">from</span> provenas.infer <span class="k">import</span> Rule
 <span class="k">from</span> provenas.learn <span class="k">import</span> admit_rule
 <span class="k">from</span> provenas <span class="k">import</span> qa
 
-store = Store(<span class="g">"mykb.db"</span>)                      <span class="c"># or ":memory:"</span>
+store = Store(<span class="g">"mykb.db"</span>)                      <span class="c"># or ":memory:" for a throwaway</span>
 store.assert_(<span class="g">"tom"</span>, <span class="g">"parent"</span>, <span class="g">"bob"</span>, source=<span class="g">"import"</span>)
 store.add_rule(Rule([(<span class="g">"?x"</span>, <span class="g">"parent"</span>, <span class="g">"?y"</span>)], (<span class="g">"?x"</span>, <span class="g">"ancestor"</span>, <span class="g">"?y"</span>), <span class="g">"anc"</span>))
 
-<span class="c"># the canonical answer path — same dict the CLI and HTTP service return</span>
+<span class="c"># ask — same dict shape the CLI and HTTP service use</span>
 r = qa.run_action(store, {<span class="g">"action"</span>: <span class="g">"check"</span>, <span class="g">"triple"</span>: [<span class="g">"tom"</span>, <span class="g">"ancestor"</span>, <span class="g">"bob"</span>]})
 r[<span class="g">"answer"</span>]   <span class="c"># True</span>
-r[<span class="g">"trace"</span>]    <span class="c"># the proof tree, as text</span>
+r[<span class="g">"trace"</span>]    <span class="c"># the receipt, as text</span>
 
 <span class="c"># gate a candidate rule instead of trusting it</span>
 ok, report = admit_rule(store, candidate, <span class="g">"sibling"</span>,
-                        positives=[(<span class="g">"ann"</span>,<span class="g">"cy"</span>)], negatives=[(<span class="g">"ann"</span>,<span class="g">"ann"</span>)])
-
-<span class="c"># the materialized closure directly (read-only)</span>
-kg, prov = store.closure()</code></pre>
+                        positives=[(<span class="g">"ann"</span>,<span class="g">"cy"</span>)], negatives=[(<span class="g">"ann"</span>,<span class="g">"ann"</span>)])</code></pre>
 
   <table>
     <tr><th>call</th><th>what it gives you</th></tr>
-    <tr><td><code>Store(path)</code></td><td>the persistent KB: <code>assert_/retract/triples</code>, <code>add_rule/rules/set_rule_active</code>, <code>add_case/cases</code>, <code>declare/schema</code>, <code>closure()</code>, <code>log/recent_log</code></td></tr>
-    <tr><td><code>qa.run_action</code></td><td>action in → <code>{kind, answer, trace}</code> out; decisions logged</td></tr>
-    <tr><td><code>admit_rule</code></td><td>± examples + pinned-case replay; commits only on pass</td></tr>
-    <tr><td><code>forward_chain(kg, rules)</code></td><td>the raw engine, if you bring your own <code>KnowledgeGraph</code></td></tr>
-    <tr><td><code>admit_tool</code> (toolsmith)</td><td>source + examples → AST gate → sandbox → registry</td></tr>
+    <tr><td><code>Store(path)</code></td><td>the knowledge base file: <code>assert_/retract/triples</code>, <code>add_rule/rules/set_rule_active</code>, <code>add_case/cases</code>, <code>declare/schema</code>, <code>closure()</code>, <code>log/recent_log</code></td></tr>
+    <tr><td><code>qa.run_action</code></td><td>question in → <code>{kind, answer, trace}</code> out; every decision logged</td></tr>
+    <tr><td><code>admit_rule</code></td><td>tests a rule against your examples + pinned cases; saves only on pass</td></tr>
+    <tr><td><code>forward_chain(kg, rules)</code></td><td>the bare engine, if you bring your own in-memory graph</td></tr>
+    <tr><td><code>admit_tool</code></td><td>code + examples → safety inspection → caged test run → saved</td></tr>
   </table>
 </section>
 
 <!-- ================================================================ 8 -->
 <section class="ch" id="ch8">
-  <div class="ch-head"><span class="num">08</span><h2>Worked real-life examples</h2></div>
-  <p>Three complete, narrated programs ship in <code>examples/</code>. Each runs offline in
-  seconds — no model, no third-party packages — and CI runs them, so they can't rot.</p>
+  <div class="ch-head"><span class="num">08</span><h2>Real-life examples</h2></div>
+  <p>Three complete, heavily-commented programs ship in the <code>examples/</code> folder.
+  Each runs offline in a few seconds — no AI model, nothing extra to install — and the test
+  suite runs them too, so they always match the real behavior of the code.</p>
 
-  <h3><code>python examples/access_audit.py</code> — the access auditor</h3>
-  <p>A realistic engineering org (roles, inheritance, grants, a suspended contractor) answering
-  the audit questions: <em>who can deploy and why; capable vs allowed; what access exists only
-  through inheritance</em> (a what-if via <code>:disable</code>); strict schema catching a typo'd
-  relation; the decision log. This is the "point it at your IAM export" blueprint.</p>
+  <h3><code>python examples/access_audit.py</code> — who can touch production, and why?</h3>
+  <p>A realistic small company: roles that inherit from each other, permissions, resources, and
+  one suspended contractor. It answers the questions an auditor actually asks — <em>who can
+  deploy? show me why. the contractor has the permission, so why is he blocked?</em> — then runs
+  a what-if (switch off the inheritance rule, see exactly whose access disappears), catches a
+  typo'd fact with strict mode, and prints the decision log. Swap in an export from your real
+  systems and this is a working access auditor.</p>
 
-  <h3><code>python examples/eligibility_screening.py</code> — benefits screening</h3>
-  <p>Four applicants, three program rules using <code>&gt;=</code>/<code>&lt;</code> guards and
-  <code>~disqualified</code>. Every verdict carries the derivation an appeal would demand — and the
-  finale pins a denial as a regression case, then watches the gate <strong>reject</strong> a
-  sloppy rewrite that would have silently re-approved it.</p>
+  <h3><code>python examples/eligibility_screening.py</code> — who qualifies, and why?</h3>
+  <p>Four applicants, three benefit rules straight out of a policy document: <em>senior discount
+  at 65+; income assistance under $30,000 unless disqualified; food support for households of 3+
+  under $45,000.</em> Every verdict prints the receipt an appeal would demand. The finale: a
+  denial is pinned as a case, then someone proposes a "simpler" rule that forgot the
+  disqualified-clause — and the gate rejects it, because it would quietly re-approve the pinned
+  denial.</p>
 
-  <h3><code>python examples/service_sidecar.py</code> — the HTTP sidecar</h3>
-  <p>Starts the service and queries it the way your app would: health, asserts, checks with
-  proofs in the response, an honest <code>false</code> for the engineer without a deploy key.
-  Copy the <code>client()</code> function into any codebase and you've integrated.</p>
+  <h3><code>python examples/service_sidecar.py</code> — your app asks over HTTP</h3>
+  <p>Starts the web service and then plays the role of your application: health check, adding
+  facts, asking questions, getting receipts back in the response — including a clean, honest
+  <code>false</code> for the engineer who lacks a deploy key. The little <code>client()</code>
+  function in it is copy-paste integration for any Python codebase.</p>
 
   <div class="marginal"><span class="tag">Suggested path</span>
-  Run all three, then swap the seeded facts for a CSV/JSON export of something you actually
-  manage — repo permissions, on-call rules, device inventory. The rules rarely number more
-  than a dozen.</div>
+  Run all three. Then pick something you personally keep answering by hand — repo permissions,
+  on-call rules, club membership tiers, equipment compatibility — export it as facts, write the
+  three-to-ten rules, and you'll have the feel of the tool in an afternoon.</div>
 </section>
 
 <!-- ================================================================ 9 -->
 <section class="ch" id="ch9">
-  <div class="ch-head"><span class="num">09</span><h2>Reference &amp; honest limits</h2></div>
+  <div class="ch-head"><span class="num">09</span><h2>Cheatsheet &amp; fine print</h2></div>
 
   <h3>Command cheatsheet</h3>
   <table>
     <tr><th>command</th><th>does</th></tr>
-    <tr><td><code>:load &lt;pack&gt;</code></td><td>seed a starter pack (family / rbac / diagnostics / eligibility / config)</td></tr>
+    <tr><td><code>:load &lt;pack&gt;</code></td><td>load a ready-made set (family / rbac / diagnostics / eligibility / config)</td></tr>
     <tr><td><code>:assert s r o</code> · <code>:retract s r o</code></td><td>add / remove a fact</td></tr>
-    <tr><td><code>:why s r o</code></td><td>check a fact and show its proof</td></tr>
-    <tr><td><code>:learn rel : desc :: +pairs | -pairs</code></td><td>LLM drafts a rule → gate tests → admit/reject</td></tr>
-    <tr><td><code>:tool name : desc :: f(a)=r, …</code></td><td>LLM writes a function → AST + sandbox + tests → registry</td></tr>
-    <tr><td><code>:call name args [as s r]</code></td><td>run a tool; optionally assert its result as a fact</td></tr>
-    <tr><td><code>:simplify (x + 0) * (2 + 3)</code></td><td>exact term rewriting → <code>x * 5</code></td></tr>
-    <tr><td><code>:case name</code> · <code>:cases</code></td><td>pin the last answer as a regression case · list pins</td></tr>
-    <tr><td><code>:disable name</code> · <code>:enable name</code></td><td>rule off/on, kept on record; closure updates instantly</td></tr>
-    <tr><td><code>:declare rel [doc]</code> · <code>:schema</code> · <code>:strict on|off</code></td><td>declared relations; strict rejects undeclared asserts</td></tr>
-    <tr><td><code>:facts [substr]</code> · <code>:rules</code> · <code>:tools</code> · <code>:rewrites</code> · <code>:log [n]</code> · <code>:kb</code></td><td>inspect everything</td></tr>
-    <tr><td><code>:narrate on|off</code></td><td>optional one-line LLM narration of exact answers</td></tr>
+    <tr><td><code>:why s r o</code></td><td>"is this true?" — with the receipt</td></tr>
+    <tr><td><code>:learn rel : description :: good pairs | bad pairs</code></td><td>AI drafts a rule → tested → saved only if it passes</td></tr>
+    <tr><td><code>:tool name : description :: f(a)=r, …</code></td><td>AI writes a function → inspected → caged test → saved</td></tr>
+    <tr><td><code>:call name args [as s r]</code></td><td>run a saved tool; optionally store its result as a fact</td></tr>
+    <tr><td><code>:simplify (x + 0) * (2 + 3)</code></td><td>exact algebra → <code>x * 5</code></td></tr>
+    <tr><td><code>:case name</code> · <code>:cases</code></td><td>pin the last answer · list pinned answers</td></tr>
+    <tr><td><code>:disable name</code> · <code>:enable name</code></td><td>switch a rule off/on (kept on record)</td></tr>
+    <tr><td><code>:declare rel [doc]</code> · <code>:schema</code> · <code>:strict on|off</code></td><td>declare vocabulary; strict mode rejects undeclared words</td></tr>
+    <tr><td><code>:facts [text]</code> · <code>:rules</code> · <code>:tools</code> · <code>:rewrites</code> · <code>:log [n]</code> · <code>:kb</code></td><td>look at everything</td></tr>
+    <tr><td><code>:narrate on|off</code></td><td>optional one-line spoken-style summary of each exact answer</td></tr>
+    <tr><td><code>:help</code> · <code>:quit</code></td><td>you guessed it</td></tr>
   </table>
 
-  <h3>The action JSON (CLI translation target, HTTP body, library input)</h3>
-<pre><code>{"action": "query",  "pattern": ["?x", "can", "prod_deploy"]}   <span class="c"># ?x marks the unknown</span>
-{"action": "check",  "triple":  ["alice", "can", "prod_deploy"]}
-{"action": "assert", "triple":  ["dana", "has_role", "analyst"]}</code></pre>
+  <h3>The question format (used by the CLI, the web service, and the library)</h3>
+<pre><code>{"action": "query",  "pattern": ["?x", "can", "prod_deploy"]}   <span class="c"># "who can deploy?" — ?x is the blank</span>
+{"action": "check",  "triple":  ["alice", "can", "prod_deploy"]} <span class="c"># "is this true?"</span>
+{"action": "assert", "triple":  ["dana", "has_role", "analyst"]} <span class="c"># "remember this."</span></code></pre>
 
-  <h3>Environment variables</h3>
+  <h3>Settings (environment variables)</h3>
   <table>
     <tr><th>variable</th><th>meaning</th></tr>
-    <tr><td><code>PROVENAS_LLM_MODEL</code></td><td>model name (default <code>qwen3.5:9b</code>)</td></tr>
-    <tr><td><code>PROVENAS_LLM_HOST</code></td><td>base URL (default local Ollama, <code>http://localhost:11434</code>)</td></tr>
-    <tr><td><code>PROVENAS_LLM_BACKEND</code></td><td><code>ollama</code> | <code>openai</code> (auto-<code>openai</code> if a key is set)</td></tr>
-    <tr><td><code>PROVENAS_LLM_API_KEY</code></td><td>bearer key for OpenAI-compatible endpoints</td></tr>
-    <tr><td><code>PROVENAS_API_TOKEN</code> · <code>PROVENAS_PORT</code> · <code>PROVENAS_BIND</code></td><td>service-mode auth token, port (8642), bind address</td></tr>
+    <tr><td><code>PROVENAS_LLM_MODEL</code></td><td>which AI model to use (default <code>qwen3.5:9b</code>)</td></tr>
+    <tr><td><code>PROVENAS_LLM_HOST</code></td><td>where the model lives (default: Ollama on your machine)</td></tr>
+    <tr><td><code>PROVENAS_LLM_BACKEND</code></td><td><code>ollama</code> or <code>openai</code> (auto-detects <code>openai</code> if a key is set)</td></tr>
+    <tr><td><code>PROVENAS_LLM_API_KEY</code></td><td>the key, for OpenAI-style services</td></tr>
+    <tr><td><code>PROVENAS_API_TOKEN</code> · <code>PROVENAS_PORT</code> · <code>PROVENAS_BIND</code></td><td>web-service password, port (8642), and network address</td></tr>
   </table>
 
-  <h3>Honest limits</h3>
+  <h3>The fine print (honest limits)</h3>
   <ul>
-    <li><strong>It only knows what you've asserted.</strong> Out-of-KB questions get
-        "not derivable" — by design. It complements retrieval/RAG; it doesn't replace it.</li>
-    <li><strong>NL accuracy tracks the model.</strong> The gates make weak models safe, not smart.</li>
-    <li><strong>The sandbox is defense-in-depth</strong> (AST allowlist + rlimited subprocess),
-        not OS-level isolation. Untrusted multi-tenant code needs containers/seccomp.</li>
-    <li><strong>Single-writer, one box.</strong> The service serializes access; envelope is
-        10⁵–10⁶ facts, enforced by the perf tests. It is not Soufflé and not a cluster.</li>
+    <li><strong>It only knows what you've taught it.</strong> Ask outside the knowledge base and
+        you get "not derivable" — on purpose. It's a fact-keeper, not a search engine.</li>
+    <li><strong>English understanding depends on the AI model you connect.</strong> The safety
+        gates make a weak model <em>safe</em>; they can't make it smart.</li>
+    <li><strong>The code cage is strong, not magical.</strong> It blocks dangerous code several
+        ways, but if strangers will run code on your machine, use real OS-level isolation
+        (containers) on top.</li>
+    <li><strong>One machine, one writer.</strong> Comfortable up to hundreds of thousands of
+        facts (there's a test enforcing that). It is not a distributed database and doesn't
+        pretend to be.</li>
   </ul>
 
-  <p style="margin-top:2rem">That's the whole tool: <em>facts in, rules over them, proofs out —
-  and a model that may only ever propose.</em> Go point it at something you're tired of
-  answering by hand.</p>
+  <p style="margin-top:2rem">That's the whole idea: <em>facts in, rules over them, receipts out —
+  and an AI that may only ever suggest.</em> Go point it at something you're tired of answering
+  by hand.</p>
 </section>
 
 <div class="ch-sep">❦</div>
@@ -545,7 +625,7 @@ kg, prov = store.closure()</code></pre>
 <footer>
   PROVENAS · MIT © Calvin Schultz ·
   <a href="https://github.com/calvincs/Provenas">github.com/calvincs/Provenas</a><br>
-  the LLM proposes — the fabric verifies — nothing admitted without a test
+  the AI suggests — the fact-keeper verifies — nothing gets in without a test
 </footer>
 
 <script>
